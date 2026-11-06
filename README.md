@@ -1,6 +1,6 @@
 # BrainHub
 
-[![CI](https://github.com/DevPedroGomes/group-documents/actions/workflows/deploy.yml/badge.svg)](https://github.com/DevPedroGomes/group-documents/actions/workflows/deploy.yml)
+[![CI](https://github.com/DevPedroGomes/brainhub-rag/actions/workflows/deploy.yml/badge.svg)](https://github.com/DevPedroGomes/brainhub-rag/actions/workflows/deploy.yml)
 
 BrainHub answers questions over a private document library (PDF, images, audio, video, web pages) and cites the document, page and date behind each answer. It also warns when the retrieved sources contradict each other and names the one with the most recent document date, answers "as of" a past date using each document's effective date, and stores a decision trail for every answer. A voice mode runs the same retrieval as a tool call and writes the same trail.
 

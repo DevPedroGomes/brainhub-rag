@@ -142,7 +142,7 @@ docker run -d --name bh-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 pgvector/p
 docker run -d --name bh-redis -p 6379:6379 redis:7-alpine
 
 cd backend
-python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.lock
 cp .env.example .env
 # edit .env: DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres,
 # REDIS_URL=redis://localhost:6379, UPLOADS_PATH=./uploads (API and worker both run
@@ -197,7 +197,8 @@ Backend variables come from `backend/.env` (see `backend/.env.example`, which a 
 
 ## Deployment
 
-- CI (`.github/workflows/deploy.yml`, on push to `main`) runs the unit tests, then the integration tests against `pgvector/pgvector:pg16` and `redis:7-alpine` service containers. Only after both pass does it run `docker compose build` and `docker compose push` to GHCR (`ghcr.io/devpedrogomes/group-documents/backend` and `/frontend`; the worker reuses the backend image). The workflow only builds and pushes; pulling and restarting on the server happens outside this repository.
+- Dependencies: `backend/requirements.txt` and `requirements-dev.txt` declare them, and `requirements.lock` and `requirements-dev.lock` pin every version, including transitive ones. The image and CI install from the locks. After changing a requirements file, regenerate both locks with the `uv pip compile` command written at the top of each.
+- CI (`.github/workflows/deploy.yml`, on push to `main`) runs the unit tests, then the integration tests against `pgvector/pgvector:pg16` and `redis:7-alpine` service containers, and in parallel runs `pip-audit` on `requirements.lock`; a dependency with a known vulnerability fails the run. Only after all of them pass does it run `docker compose build` and `docker compose push` to GHCR (`ghcr.io/devpedrogomes/group-documents/backend` and `/frontend`; the worker reuses the backend image). The workflow only builds and pushes; pulling and restarting on the server happens outside this repository.
 - Compose services: `redis`, `backend`, `worker`, `frontend`. `DB_PASSWORD` and `JWT_SECRET` are interpolated from the host environment. The services read `backend/.env`, but the compose `environment:` blocks pin `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` (API only), `UPLOADS_PATH`, `REDIS_URL`, `AGENT_OPS_REDIS_URL`, `AGENT_OPS_PROJETO` and `AGENT_OPS_PROFUNDIDADE_MAXIMA`, which override it. Hosts: `group-documents.pgdev.com.br` (frontend) and `group-documents-api.pgdev.com.br` (API), with Let's Encrypt certificates through Traefik.
 - Stop the worker while migration 008 runs: chunks inserted during its window keep the old English-only vector. If that happened, re-run the reindex afterwards (`UPDATE chunks SET content = content`).
 - Migration 008 rewrites every `chunks` row once (`UPDATE chunks SET content = content`) to rebuild the search vectors, holding row locks while it runs; its cost grows with the table, since every row's GIN and HNSW entries are written again. If the database role cannot create `unaccent`, 008 logs a WARNING at boot with the manual recovery steps and builds the Portuguese configuration without accent folding instead of failing.

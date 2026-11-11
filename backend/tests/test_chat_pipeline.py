@@ -95,6 +95,101 @@ def test_falha_da_condensacao_busca_com_a_pergunta_original(chat):
 
 
 # ---------------------------------------------------------------------------
+# Recorte no tempo: o historico nao leva ao gerador fato de fonte fora do corte
+# ---------------------------------------------------------------------------
+
+def _citada(titulo: str, data: str | None, kind: str = "document") -> dict:
+    """Uma citacao como `messages.citations` guarda."""
+    return {
+        "kind": kind, "document_id": None if kind == "web" else f"doc-{titulo}",
+        "document_title": titulo, "page": 1, "snippet": "", "document_date": data,
+        "url": "https://exemplo.com" if kind == "web" else None,
+    }
+
+
+V1 = "Politica Comercial da Aurora, versao 1"
+V2 = "Politica Comercial da Aurora, versao 2"
+
+CONVERSA_SEM_RECORTE = [
+    {"role": "user", "content": "A partir de quanto o frete nacional e gratis?"},
+    {"role": "assistant", "content": "Pela versao 2, o frete e gratis acima de 150 reais.",
+     "citations": [_citada(V2, "2025-11-01"), _citada(V1, "2023-03-01")]},
+    {"role": "user", "content": "e o prazo de devolucao do pacote lacrado?"},
+    {"role": "assistant", "content": "A versao 1 diz 30 dias.", "citations": [_citada(V1, "2023-03-01")]},
+]
+
+
+def test_com_as_of_resposta_que_citou_fonte_posterior_nao_chega_ao_gerador(chat):
+    cliente, cenario = chat
+    cenario.historico = list(CONVERSA_SEM_RECORTE)
+    autocontida = "A partir de quanto o frete nacional era gratis em 2024?"
+    cenario.resposta_multi_query = f"{autocontida}\nfrete gratis 2024"
+    cenario.acervo[autocontida] = [
+        trecho("c1", "d1", V1, data="2023-03-01", texto="Resposta: 120 reais."),
+        trecho("c2", "d1", V1, data="2023-03-01", texto="Resposta: 30 dias."),
+    ]
+
+    perguntar(cliente, "e em 2024?", as_of="2024-01-01")
+
+    assert {b["as_of"] for b in cenario.buscas} == {"2024-01-01"}
+    (geracao,) = cenario.geracoes
+    historico = geracao["messages"][:-1]
+    # A resposta que citou a versao 2 (de 2025) sai; a que so citou a versao 1
+    # fica, e as perguntas da pessoa ficam todas.
+    assert [m["content"] for m in historico] == [
+        CONVERSA_SEM_RECORTE[0]["content"],
+        CONVERSA_SEM_RECORTE[2]["content"],
+        CONVERSA_SEM_RECORTE[3]["content"],
+    ]
+    assert not any("150" in m["content"] for m in geracao["messages"])
+    assert "AS OF 2024-01-01" in geracao["system"]
+
+
+@pytest.mark.parametrize(
+    "citacoes",
+    [
+        [_citada("Site externo", None, kind="web")],
+        [_citada("Contrato sem data", None)],
+        [_citada(V1, "2023-03-01"), _citada(V2, "2025-11-01")],
+        [],
+        None,
+    ],
+    ids=["web", "sem-data", "uma-posterior", "sem-citacao", "citacao-nula"],
+)
+def test_com_as_of_so_volta_resposta_com_todas_as_fontes_datadas_ate_o_corte(chat, citacoes):
+    cliente, cenario = chat
+    cenario.historico = [
+        {"role": "user", "content": "qual o frete gratis?"},
+        {"role": "assistant", "content": "acima de 150 reais", "citations": citacoes},
+        {"role": "user", "content": "e o desconto de assinante?"},
+        # Documento do proprio dia do corte entra: o recorte e inclusivo.
+        {"role": "assistant", "content": "15 por cento", "citations": [_citada(V1, "2024-01-01")]},
+    ]
+    cenario.resposta_multi_query = "frete gratis em 2024"
+    cenario.acervo["frete gratis em 2024"] = [trecho("c1", "d1", V1, data="2023-03-01")]
+
+    perguntar(cliente, "e em 2024?", as_of="2024-01-01T23:59:59Z")
+
+    (geracao,) = cenario.geracoes
+    assert [m["content"] for m in geracao["messages"][:-1]] == [
+        "qual o frete gratis?", "e o desconto de assinante?", "15 por cento",
+    ]
+
+
+def test_sem_as_of_o_historico_chega_inteiro_e_sem_aviso_de_recorte(chat):
+    cliente, cenario = chat
+    cenario.historico = list(CONVERSA_SEM_RECORTE)
+    cenario.resposta_multi_query = "frete gratis hoje"
+    cenario.acervo["frete gratis hoje"] = [trecho("c1", "d2", V2, data="2025-11-01")]
+
+    perguntar(cliente, "e hoje?")
+
+    (geracao,) = cenario.geracoes
+    assert [m["content"] for m in geracao["messages"][:-1]] == [m["content"] for m in CONVERSA_SEM_RECORTE]
+    assert "AS OF" not in geracao["system"]
+
+
+# ---------------------------------------------------------------------------
 # CRAG: com baixa confianca, reescreve e RECONSULTA O ACERVO
 # ---------------------------------------------------------------------------
 

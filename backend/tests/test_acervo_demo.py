@@ -156,6 +156,7 @@ def semeadura(monkeypatch):
 
     criadas: list[tuple[str, str]] = []
     monkeypatch.setattr(script, "garantir_usuario", lambda email, senha: criadas.append((email, senha)) or "u")
+    monkeypatch.setattr(script, "adotar_titulos_antigos", lambda _uid: 0)
     monkeypatch.setattr(script, "limpar", lambda _uid: 0)
     monkeypatch.delenv("ACERVO_DEMO_SENHA", raising=False)
 
@@ -199,3 +200,58 @@ def test_estimar_nao_pede_senha_porque_nao_escreve_nada(semeadura, capsys):
 
     assert criadas == []
     assert "a semear:     50" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Titulo limpo e data de vigencia no que ja foi semeado (Postgres real)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.integration
+def test_semeadura_tira_o_prefixo_do_titulo_e_devolve_a_data_pelo_cabecalho(banco_limpo):
+    """Documento semeado sem `effective_date` some de toda pergunta com `as_of`:
+    o recorte cai no dia do upload. A semeadura confere isso a cada execucao."""
+    from sqlalchemy import text as sqltext
+
+    from app.db.engine import engine
+    from scripts import semear_acervo_demo as script
+    from tests.test_integracao_busca import _documento, _trecho
+
+    v1, chamado = gerar(500)[0], gerar(500)[5]
+    with engine.begin() as conn:
+        u = str(conn.execute(
+            sqltext("INSERT INTO users (email, password_hash) VALUES ('demo@exemplo.com.br', 'x') RETURNING id")
+        ).scalar_one())
+    indexado = _documento(u, f"[acervo-demo] {v1.titulo}")
+    _trecho(u, indexado, v1.texto, eixo=1)
+    sem_chunk = _documento(u, f"[acervo-demo] {chamado.titulo}")
+    # Documento que a pessoa subiu: nem titulo nem data mudam, e `--limpar` nao o apaga.
+    proprio = _documento(u, "Contrato de fornecimento")
+    _trecho(u, proprio, "Emitido em: 2020-01-01", eixo=2)
+
+    assert script.ja_semeados(u) == {v1.titulo, chamado.titulo}
+    assert script.sem_data(u) == 2
+
+    assert script.adotar_titulos_antigos(u) == 2
+    assert script.adotar_titulos_antigos(u) == 0
+    assert script.ja_semeados(u) == {v1.titulo, chamado.titulo}
+
+    assert script.restaurar_datas(u) == 1
+    assert script.restaurar_datas(u) == 0
+    assert script.sem_data(u) == 1  # o que ainda nao tem chunk fica para a proxima
+
+    with engine.begin() as conn:
+        linhas = {
+            str(r.id): r for r in conn.execute(
+                sqltext("SELECT id, title, effective_date, meta FROM documents WHERE user_id = :u"), {"u": u}
+            )
+        }
+    assert linhas[indexado].title == v1.titulo
+    assert linhas[indexado].effective_date == v1.emitido_em
+    assert linhas[indexado].meta == {"acervo": "demo", "emitido_em": v1.emitido_em.isoformat()}
+    assert linhas[sem_chunk].title == chamado.titulo and linhas[sem_chunk].effective_date is None
+    assert linhas[proprio].title == "Contrato de fornecimento" and linhas[proprio].effective_date is None
+
+    assert script.limpar(u) == 2
+    with engine.begin() as conn:
+        restantes = conn.execute(sqltext("SELECT id FROM documents WHERE user_id = :u"), {"u": u}).scalars().all()
+    assert [str(r) for r in restantes] == [proprio]

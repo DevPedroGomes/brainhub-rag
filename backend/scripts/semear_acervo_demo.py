@@ -41,9 +41,18 @@ espaça o enfileiramento para caber no limite.
 
 IDEMPOTENTE
 -----------
-A chave é o título, que carrega o nome do arquivo do acervo. Rodar de novo pula o
-que já existe, então um lote interrompido continua de onde parou sem duplicar
-chunk nem pagar embedding duas vezes.
+A chave é o título, entre os documentos marcados com `meta.acervo = "demo"`. Rodar
+de novo pula o que já existe, então um lote interrompido continua de onde parou sem
+duplicar chunk nem pagar embedding duas vezes.
+
+DATA DE VIGÊNCIA
+----------------
+O recorte `as_of` corta por `effective_date`. Documento sem ela cai na data do
+upload, e o acervo inteiro subiu no mesmo dia: ele some de toda pergunta sobre o
+passado. Por isso cada execução confere o que já foi semeado e devolve a data a
+quem ficou sem, lendo o cabeçalho do próprio texto ("Emitido em: AAAA-MM-DD").
+`--estimar` mostra quantos estão sem data; `--corrigir` faz só a conferência, sem
+enfileirar nada nem gastar.
 
 SENHA DA CONTA
 --------------
@@ -56,6 +65,7 @@ USO
     python -m scripts.semear_acervo_demo --email demo@gomio.com.br --estimar
     ACERVO_DEMO_SENHA=... python -m scripts.semear_acervo_demo --email demo@gomio.com.br --limite 50
     python -m scripts.semear_acervo_demo --email demo@gomio.com.br --senha ...
+    ACERVO_DEMO_SENHA=... python -m scripts.semear_acervo_demo --email demo@gomio.com.br --corrigir
 """
 
 from __future__ import annotations
@@ -78,12 +88,17 @@ from scripts.gerar_acervo_demo import Documento, gerar
 
 MIME_PDF = "application/pdf"
 MINIMO_SENHA = 16
-PREFIXO = "[acervo-demo]"
-"""Marca o título dos documentos semeados.
+MARCA = "demo"
+"""Valor de `meta.acervo` nos documentos semeados.
 
 Serve a duas coisas: torna a semeadura idempotente sem tabela nova, e deixa
-`--limpar` apagar o acervo sem tocar em documento que a pessoa subiu à mão.
+`--limpar` apagar o acervo sem tocar em documento que a pessoa subiu à mão. Fica
+em `meta`, e não no título, porque o título aparece na lista e na citação.
 """
+PREFIXO_ANTIGO = "[acervo-demo] "
+"""Prefixo de título que marcava o documento semeado antes da marca em `meta`."""
+DO_ACERVO = "user_id = :u AND meta->>'acervo' = :marca"
+DATA_NO_CABECALHO = r"Emitido em: ([0-9]{4}-[0-9]{2}-[0-9]{2})"
 
 
 def senha_da_conta(argumento: str | None) -> str:
@@ -130,17 +145,73 @@ def garantir_usuario(email: str, senha: str) -> str:
         return user_id
 
 
+def _parametros(user_id: str) -> dict:
+    return {"u": user_id, "marca": MARCA, "p": PREFIXO_ANTIGO, "n": len(PREFIXO_ANTIGO) + 1}
+
+
 def ja_semeados(user_id: str) -> set[str]:
+    """Títulos já semeados, contando os que ainda têm o prefixo antigo."""
     with engine.begin() as conn:
         linhas = conn.execute(
-            sqltext("SELECT title FROM documents WHERE user_id = :u AND title LIKE :p"),
-            {"u": user_id, "p": f"{PREFIXO}%"},
+            sqltext(
+                "SELECT CASE WHEN starts_with(title, :p) THEN substr(title, :n) ELSE title END "
+                f"FROM documents WHERE ({DO_ACERVO}) OR (user_id = :u AND starts_with(title, :p))"
+            ),
+            _parametros(user_id),
         ).fetchall()
     return {linha[0] for linha in linhas}
 
 
-def titulo_de(doc: Documento) -> str:
-    return f"{PREFIXO} {doc.titulo}"
+def adotar_titulos_antigos(user_id: str) -> int:
+    """Tira o prefixo antigo do título e grava a marca em `meta`. Idempotente."""
+    with engine.begin() as conn:
+        n = conn.execute(
+            sqltext(
+                "UPDATE documents SET title = substr(title, :n), "
+                "meta = COALESCE(meta, '{}'::jsonb) || jsonb_build_object('acervo', CAST(:marca AS text)) "
+                "WHERE user_id = :u AND starts_with(title, :p)"
+            ),
+            _parametros(user_id),
+        ).rowcount
+    return int(n or 0)
+
+
+def sem_data(user_id: str) -> int:
+    """Quantos documentos semeados estão sem `effective_date`."""
+    with engine.begin() as conn:
+        return int(conn.execute(
+            sqltext(
+                "SELECT count(*) FROM documents "
+                f"WHERE (({DO_ACERVO}) OR (user_id = :u AND starts_with(title, :p))) "
+                "AND effective_date IS NULL"
+            ),
+            _parametros(user_id),
+        ).scalar_one())
+
+
+def restaurar_datas(user_id: str) -> int:
+    """Devolve a `effective_date` ao documento semeado que ficou sem ela.
+
+    A data sai do cabeçalho do texto indexado, no primeiro chunk que o traz, e
+    não do gerador: o gerador só reproduz o mesmo documento com a mesma
+    `--quantidade`, e o cabeçalho é o próprio documento. Documento ainda sem
+    chunk fica para a próxima execução. `meta.emitido_em` volta junto.
+    """
+    with engine.begin() as conn:
+        n = conn.execute(
+            sqltext(
+                "UPDATE documents d SET effective_date = CAST(c.emitido AS date), "
+                "meta = COALESCE(d.meta, '{}'::jsonb) || jsonb_build_object('emitido_em', c.emitido) "
+                "FROM (SELECT DISTINCT ON (document_id) document_id, "
+                "substring(content FROM :padrao) AS emitido "
+                "FROM chunks WHERE user_id = :u AND content ~ :padrao "
+                "ORDER BY document_id, page, chunk_index) c "
+                "WHERE d.id = c.document_id AND d.user_id = :u "
+                "AND d.meta->>'acervo' = :marca AND d.effective_date IS NULL"
+            ),
+            {**_parametros(user_id), "padrao": DATA_NO_CABECALHO},
+        ).rowcount
+    return int(n or 0)
 
 
 async def reprocessar(user_id: str, rpm: float = 0) -> int:
@@ -158,9 +229,9 @@ async def reprocessar(user_id: str, rpm: float = 0) -> int:
         linhas = conn.execute(
             sqltext(
                 "SELECT id, storage_path FROM documents "
-                "WHERE user_id = :u AND title LIKE :p AND status IN ('pending','failed')"
+                f"WHERE {DO_ACERVO} AND status IN ('pending','failed')"
             ),
-            {"u": user_id, "p": f"{PREFIXO}%"},
+            _parametros(user_id),
         ).fetchall()
 
     if not linhas:
@@ -189,8 +260,7 @@ def limpar(user_id: str) -> int:
     """Apaga só o que este script semeou. `chunks` cai por ON DELETE CASCADE."""
     with engine.begin() as conn:
         n = conn.execute(
-            sqltext("DELETE FROM documents WHERE user_id = :u AND title LIKE :p"),
-            {"u": user_id, "p": f"{PREFIXO}%"},
+            sqltext(f"DELETE FROM documents WHERE {DO_ACERVO}"), _parametros(user_id)
         ).rowcount
     return int(n or 0)
 
@@ -213,7 +283,7 @@ async def semear(user_id: str, docs: list[Documento], destino_pdf: Path, rpm: fl
     intervalo = 60.0 / rpm if rpm > 0 else 0.0
 
     for doc in docs:
-        titulo = titulo_de(doc)
+        titulo = doc.titulo
         if titulo in existentes:
             pulados += 1
             continue
@@ -238,7 +308,11 @@ async def semear(user_id: str, docs: list[Documento], destino_pdf: Path, rpm: fl
                     # `as_of` corta por `effective_date`. O acervo inteiro sobe no
                     # mesmo dia, entao sem ela "e em marco de 2025?" nao acharia
                     # nada. `meta.emitido_em` fica como registro de origem.
-                    meta={"emitido_em": doc.emitido_em.isoformat(), "categoria": doc.categoria},
+                    meta={
+                        "emitido_em": doc.emitido_em.isoformat(),
+                        "categoria": doc.categoria,
+                        "acervo": MARCA,
+                    },
                     effective_date=doc.emitido_em,
                 )
                 .returning(documents.c.id)
@@ -280,6 +354,8 @@ def main() -> None:
     p.add_argument("--limpar", action="store_true", help="apaga o acervo semeado desta conta e sai")
     p.add_argument("--reprocessar", action="store_true",
                    help="reenfileira os documentos que ficaram em pending ou failed, e sai")
+    p.add_argument("--corrigir", action="store_true",
+                   help="só ajusta título e data do que já foi semeado, e sai; não enfileira nada")
     args = p.parse_args()
 
     # Antes de gerar ou tocar no banco: sem senha, nada acontece.
@@ -291,12 +367,13 @@ def main() -> None:
     if args.estimar:
         user_id = buscar_usuario(args.email)
         existentes = ja_semeados(user_id) if user_id else set()
-        pendentes = [d for d in docs if titulo_de(d) not in existentes]
+        pendentes = [d for d in docs if d.titulo not in existentes]
         if args.limite:
             pendentes = pendentes[: args.limite]
         print(f"conta:        {args.email}  ({user_id or 'ainda nao existe'})")
         print(f"no acervo:    {len(docs)}")
         print(f"ja semeados:  {len(existentes)}")
+        print(f"sem data:     {sem_data(user_id) if user_id else 0}")
         print(f"a semear:     {len(pendentes)}")
         print(f"custo:        ~1 chunk por documento, entao ~{len(pendentes)} enriquecimentos")
         print(f"              + ~{len(pendentes)} chamadas de embedding (uma por documento)")
@@ -304,8 +381,20 @@ def main() -> None:
 
     user_id = garantir_usuario(args.email, senha)
 
+    # Antes do `--limpar`, que apaga pela marca em `meta`.
+    adotados = adotar_titulos_antigos(user_id)
+    if adotados:
+        print(f"{adotados} títulos sem o prefixo antigo")
+
     if args.limpar:
         print(f"{limpar(user_id)} documentos removidos de {args.email}")
+        return
+
+    restaurados = restaurar_datas(user_id)
+    if restaurados:
+        print(f"{restaurados} documentos voltaram a ter data de vigência")
+    if args.corrigir:
+        print(f"sem data:     {sem_data(user_id)}")
         return
 
     if args.reprocessar:
@@ -314,7 +403,7 @@ def main() -> None:
         return
 
     existentes = ja_semeados(user_id)
-    pendentes = [d for d in docs if titulo_de(d) not in existentes]
+    pendentes = [d for d in docs if d.titulo not in existentes]
     if args.limite:
         pendentes = pendentes[: args.limite]
 

@@ -9,14 +9,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY requirements.lock .
 # `git` entra e sai no MESMO layer: o pip precisa dele para resolver a
 # dependencia `git+https://` do agent-ops, mas um binario git na imagem de
 # runtime e superficie de ataque que nada usa. Precisa ser um `RUN` so —
 # instalar num layer e purgar noutro nao reduz a imagem, porque o layer
 # anterior ja gravou o binario e layers sao imutaveis.
 RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -r requirements.lock \
     && apt-get purge -y --auto-remove git \
     && rm -rf /var/lib/apt/lists/*
 

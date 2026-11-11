@@ -521,9 +521,9 @@ def com_acervo(banco_limpo, monkeypatch, cotas, modo_convidado):
             sqltext("INSERT INTO users (email, password_hash) VALUES (:e, 'x') RETURNING id"),
             {"e": modo_convidado.demo_corpus_email},
         ).scalar_one())
-    doc = _documento(acervo, "[acervo-demo] Politica Comercial da Aurora, versao 2")
+    doc = _documento(acervo, "Politica Comercial da Aurora, versao 2")
     _trecho(acervo, doc, "A partir de quanto o frete nacional e gratis? Resposta: 150 reais.", eixo=1)
-    _trecho(acervo, _documento(acervo, "[acervo-demo] Ata 001"), "indicadores do mes", eixo=2)
+    _trecho(acervo, _documento(acervo, "Ata 001"), "indicadores do mes", eixo=2)
 
     buscas: list[str] = []
     hibrida = retriever.hybrid_search
@@ -685,3 +685,77 @@ def test_limpar_convidados_apaga_so_expirados(com_acervo):
     assert restantes == {threads[valido], threads[comum]}
     assert donos_de_trilha == {valido, comum}
     assert mensagens == 2
+
+
+@pytest.mark.integration
+def test_as_of_responde_com_a_versao_vigente_sem_trazer_a_posterior_pelo_historico(
+    banco_limpo, monkeypatch, cotas, modo_convidado
+):
+    """A pergunta que a landing sugere, na biblioteca de exemplo, com Postgres real.
+
+    A primeira resposta, sem recorte, cita as duas versoes da politica e fica no
+    historico. A segunda pergunta, "como era em 01/01/2024", so pode ver a
+    versao 1: na busca, pelo filtro de data, e no gerador, pelo historico.
+    """
+    import re
+    from datetime import date
+
+    from sqlalchemy import text as sqltext
+
+    from app.api.rate_limit import limiter
+    from app.core.rag import generator, retriever, transformer
+    from app.db.engine import engine
+    from app.main import create_app
+    from scripts.gerar_acervo_demo import politicas
+    from tests.dubles_chat import do_tipo, eventos
+    from tests.test_integracao_busca import _documento, _eixo, _trecho
+
+    with engine.begin() as conn:
+        acervo = str(conn.execute(
+            sqltext("INSERT INTO users (email, password_hash) VALUES (:e, 'x') RETURNING id"),
+            {"e": modo_convidado.demo_corpus_email},
+        ).scalar_one())
+    ids = {}
+    for politica in politicas():
+        ids[politica.titulo] = _documento(acervo, politica.titulo, effective_date=politica.emitido_em)
+        _trecho(acervo, ids[politica.titulo], politica.texto, eixo=1)
+    v1, v2 = (titulo for titulo in ids)
+    assert politicas()[0].emitido_em == date(2023, 3, 1) and politicas()[1].emitido_em > date(2024, 1, 1)
+
+    geracoes: list[dict] = []
+
+    def gerar(**kw):
+        """Responde com os valores de frete dos trechos, como um modelo fiel a eles."""
+        geracoes.append(kw)
+        valores = re.findall(r"Resposta: (\d+) reais", kw["messages"][-1]["content"])
+        yield f"O frete nacional e gratis acima de {' ou '.join(valores)} reais."
+
+    monkeypatch.setattr(modo_convidado, "cohere_api_key", None)
+    monkeypatch.setattr(modo_convidado, "enable_conflict_detection", False)
+    monkeypatch.setattr(modo_convidado, "tavily_api_key", None)
+    monkeypatch.setattr(retriever, "chat_complete", lambda **_kw: "")
+    monkeypatch.setattr(retriever, "get_query_embeddings", lambda consultas: [_eixo(1) for _ in consultas])
+    monkeypatch.setattr(transformer, "chat_complete", lambda **_kw: "")
+    monkeypatch.setattr(generator, "chat_stream", gerar)
+    monkeypatch.setattr(limiter, "enabled", False)
+    cliente = TestClient(create_app())
+    _, cab = _entrar_como_convidado(cliente)
+    pergunta = "A partir de quanto o frete nacional é grátis?"
+
+    primeira = eventos(cliente.post("/chat", json={"message": pergunta}, headers=cab).text)
+    (fim,) = do_tipo(primeira, "done")
+    assert {f["document_title"] for f in do_tipo(primeira, "sources")[0]} == {v1, v2}
+    assert "150" in "".join(do_tipo(primeira, "chunk"))
+
+    segunda = eventos(cliente.post(
+        "/chat",
+        json={"message": pergunta, "thread_id": fim["thread_id"], "as_of": "2024-01-01"},
+        headers=cab,
+    ).text)
+
+    assert {f["document_title"] for f in do_tipo(segunda, "sources")[0]} == {v1}
+    resposta = "".join(do_tipo(segunda, "chunk"))
+    assert "120" in resposta and "150" not in resposta
+    entrada = " ".join(m["content"] for m in geracoes[-1]["messages"])
+    assert "150" not in entrada and v2 not in entrada
+    assert pergunta in entrada  # a pergunta anterior da pessoa continua no historico

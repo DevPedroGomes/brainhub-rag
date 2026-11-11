@@ -45,8 +45,20 @@ _WEB = (
 )
 
 
-def _system_prompt(low_confidence: bool, com_web: bool) -> str:
-    return _SYSTEM_PROMPT + (_BAIXA_CONFIANCA if low_confidence else "") + (_WEB if com_web else "")
+_RECORTE = (
+    "\n\nAS OF {dia}: the user asked how things stood on {dia}. The excerpts come only from "
+    "documents dated on or before that day. Answer as of that date, and never state a fact "
+    "from earlier turns of this conversation that the excerpts below do not support."
+)
+
+
+def _system_prompt(low_confidence: bool, com_web: bool, as_of: Optional[str] = None) -> str:
+    return (
+        _SYSTEM_PROMPT
+        + (_BAIXA_CONFIANCA if low_confidence else "")
+        + (_WEB if com_web else "")
+        + (_RECORTE.format(dia=as_of[:10]) if as_of else "")
+    )
 
 
 def _format_context(documents: list[dict], web_results: Optional[list[dict]] = None) -> str:
@@ -102,13 +114,14 @@ def generate_answer(
     low_confidence: bool = False,
     web_results: Optional[list[dict]] = None,
     max_tokens: int = MAX_TOKENS_RESPOSTA,
+    as_of: Optional[str] = None,
 ) -> str:
     """Generate a complete answer (non-streaming)."""
     settings = get_settings()
     return chat_complete(
         model=settings.generation_model,
         max_tokens=max_tokens,
-        system=_system_prompt(low_confidence, bool(web_results)),
+        system=_system_prompt(low_confidence, bool(web_results), as_of),
         messages=_build_messages(question, documents, history, web_results),
     )
 
@@ -120,12 +133,13 @@ def stream_answer(
     low_confidence: bool = False,
     web_results: Optional[list[dict]] = None,
     max_tokens: int = MAX_TOKENS_RESPOSTA,
+    as_of: Optional[str] = None,
 ) -> Generator[str, None, None]:
     """Stream answer tokens through the configured LLM provider."""
     settings = get_settings()
     yield from chat_stream(
         model=settings.generation_model,
         max_tokens=max_tokens,
-        system=_system_prompt(low_confidence, bool(web_results)),
+        system=_system_prompt(low_confidence, bool(web_results), as_of),
         messages=_build_messages(question, documents, history, web_results),
     )

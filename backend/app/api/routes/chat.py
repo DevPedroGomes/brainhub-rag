@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 import uuid
+from datetime import date
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, Request, HTTPException
@@ -153,6 +154,40 @@ def get_thread_history(thread_id: str, user_id: str, limit: int = 20) -> list[di
         }
         for r in rows
     ]
+
+
+def _resposta_no_recorte(mensagem: dict, corte: date) -> bool:
+    """True quando toda fonte citada pela resposta e documento com data ate `corte`."""
+    citacoes = mensagem.get("citations") or []
+    if not citacoes:
+        return False
+    for citacao in citacoes:
+        if not isinstance(citacao, dict) or citacao.get("kind") == "web":
+            return False
+        try:
+            if date.fromisoformat(str(citacao.get("document_date") or "")[:10]) > corte:
+                return False
+        except ValueError:
+            return False
+    return True
+
+
+def historico_no_recorte(historico: list[dict], as_of: str | None) -> list[dict]:
+    """O historico que o gerador pode ver numa pergunta com `as_of`.
+
+    Uma resposta anterior carrega os fatos das fontes que citou. Com recorte no
+    tempo, ela so volta ao gerador se todas essas fontes forem documentos com
+    data ate o dia do corte. A que citou documento posterior, documento sem
+    data, pagina da web ou nada fica de fora: o texto dela levaria para a
+    resposta um fato que a busca filtrou. As perguntas da pessoa ficam, para a
+    pergunta de seguimento ("e em 2024?") continuar fazendo sentido. Sem
+    `as_of`, o historico passa inteiro.
+    """
+    if not as_of:
+        return historico
+    # O mesmo corte da busca: so a data, inclusiva no dia.
+    corte = date.fromisoformat(as_of[:10])
+    return [m for m in historico if m.get("role") == "user" or _resposta_no_recorte(m, corte)]
 
 
 def _abrir_conversa(thread_id: str | None, user_id: str) -> tuple[str, list[dict]]:
@@ -425,7 +460,9 @@ async def chat(request: Request, body: ChatBody):
 
             # O historico vai junto para condensar pergunta de seguimento ("e em
             # marco de 2025?"): a busca usa a pergunta autocontida, o gerador
-            # continua recebendo a original.
+            # continua recebendo a original. A busca ve a conversa inteira porque
+            # so condensa a pergunta; o corte por data vale nos trechos que ela
+            # devolve, e o gerador recebe o historico ja recortado.
             recuperacao = await loop.run_in_executor(
                 None,
                 lambda: retrieve_documents(
@@ -574,10 +611,11 @@ async def chat(request: Request, body: ChatBody):
                 stream_answer(
                     question=body.message,
                     documents=filtered_docs,
-                    history=history,
+                    history=historico_no_recorte(history, body.as_of),
                     low_confidence=baixa_confianca,
                     web_results=resultados_web,
                     max_tokens=teto_de_tokens,
+                    as_of=body.as_of,
                 )
             ):
                 full_answer += token

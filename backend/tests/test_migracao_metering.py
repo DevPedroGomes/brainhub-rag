@@ -1,13 +1,13 @@
 """Prende a migracao do teto de gasto para o nucleo compartilhado.
 
 O que se prende aqui:
-- o modulo local `app/core/budget.py` nao volta. Ele carregava um bug que
-  esteve em producao: com `incrby` e `expire` no mesmo `try`, uma falha de
-  rede entre as duas idas ao Redis levantava TetoAtingido SEM desfazer o
-  incremento — chamada recusada cobrando cota do proximo visitante;
+- o modulo local `app/core/budget.py` nao volta. Ele carregava um bug: com
+  `incrby` e `expire` no mesmo `try`, uma falha de rede entre as duas idas ao
+  Redis levantava TetoAtingido SEM desfazer o incremento — chamada recusada
+  cobrando cota do proximo visitante;
 - as rotas separam 503 (backend de cota ilegivel) de 429 (teto do dia
-  atingido). Antes as duas coisas eram 503, e nenhum painel conseguia
-  distinguir saturacao de indisponibilidade;
+  atingido). Com as duas coisas em 503, nenhum painel consegue distinguir
+  saturacao de indisponibilidade;
 - `panorama` recebe os limites, que e a unica quebra de contrato da migracao.
 
 Sem rede, sem Redis, sem chave: o job `test` do deploy trava o build e roda
@@ -28,7 +28,7 @@ BACKEND = Path(__file__).resolve().parents[1]
 
 def test_o_modulo_local_de_teto_nao_voltou():
     assert not (BACKEND / "app" / "core" / "budget.py").exists(), (
-        "budget.py voltou; ele carregava o bug de cota que esteve em producao"
+        "budget.py voltou; o teto de gasto mora no nucleo compartilhado"
     )
 
 
@@ -70,7 +70,7 @@ def test_teto_indisponivel_e_subclasse_para_o_except_antigo_seguir_valendo():
 
 
 def test_panorama_recebe_os_limites():
-    # A unica quebra de contrato da migracao: no modulo antigo `panorama()` lia
-    # os limites das settings sozinha.
+    # A unica quebra de contrato da migracao: `panorama()` nao le os limites das
+    # settings sozinha.
     assinatura = inspect.signature(metering.panorama)
     assert "limites" in assinatura.parameters

@@ -22,7 +22,7 @@ def _get_redis() -> redis.Redis:
 
 def _cache_key(query: str, input_type: str = "query") -> str:
     """O vetor depende do modelo e do lado (query/document), nao so do texto.
-    Sem os dois na chave, trocar o modelo servia por ate um TTL vetores do
+    Sem os dois na chave, trocar o modelo serviria por ate um TTL vetores do
     modelo antigo, de outro espaco vetorial, sem erro nenhum."""
     query_hash = hashlib.sha256(query.strip().lower().encode()).hexdigest()
     modelo = get_settings().voyage_doc_model
@@ -65,12 +65,9 @@ def get_query_embeddings(queries: list[str]) -> list[list[float]]:
     """Embeddings de VARIAS queries, com no maximo UMA chamada ao provider.
 
     O retriever gera variantes da pergunta (multi-query) e precisa do embedding
-    de cada uma. Pedir uma por vez custava N requisicoes por pergunta — com o
-    padrao `multi_query_count=3`, quatro. A conta Voyage sem meio de pagamento
-    e limitada a 3 requisicoes por MINUTO, entao toda pergunta INEDITA estourava
-    o limite e o chat morria mostrando o erro cru do provider ao visitante.
-    Pergunta repetida funcionava, porque as variantes vinham do cache — o que
-    fazia a falha parecer intermitente em vez de estrutural.
+    de cada uma. Pedir uma por vez custaria N requisicoes por pergunta — com o
+    padrao `multi_query_count=3`, quatro — contra o limite de requisicoes por
+    MINUTO do provider de embedding.
 
     Uma requisicao resolve todas as variantes que faltam, independente de
     quantas sejam.

@@ -51,7 +51,8 @@ class _Transacao:
 
     def __exit__(self, *_excecao) -> bool:
         # Nunca engole excecao: o codigo sob teste e que decide o que fazer com
-        # ela, e um duble que engolisse mascararia exatamente o bug C1.
+        # ela, e um duble que engolisse mascararia exatamente a falha que nao
+        # chega ao envelope do job.
         return False
 
 

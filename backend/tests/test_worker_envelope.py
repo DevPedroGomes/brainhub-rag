@@ -1,25 +1,24 @@
 """Prende o COMPORTAMENTO do envelope do job, nao o texto dele.
 
-Os testes que ja existiam liam `inspect.getsource(ingerir)` e conferiam que as
-palavras `descartar` e `tentar_de_novo` apareciam ali. As duas apareciam — e as
-duas eram inalcancaveis, porque `process_ingestion` engolia a propria excecao e
-o envelope nunca via falha nenhuma. Um teste que le fonte nao consegue notar
-isso; por isso os daqui EXECUTAM o envelope.
+Um teste que le `inspect.getsource(ingerir)` confere que as palavras
+`descartar` e `tentar_de_novo` aparecem ali, mas nao nota se elas sao
+inalcancaveis — se `process_ingestion` engolir a propria excecao, o envelope
+nunca ve falha nenhuma. Por isso os daqui EXECUTAM o envelope.
 
 Sem rede, sem Redis e sem Postgres: o engine e um duble que anota o SQL
 (`tests/motor_falso.py`) e a fila e monkeypatchada. Sem `pytest-asyncio` —
 `asyncio.run` basta para chamar uma corrotina de dentro de um teste sincrono.
 
 O que cada teste prende:
-- a falha do dominio CHEGA ao envelope (C1). Enquanto nao chegava, o job
-  terminava gravando `concluido` em `job_progress` para um documento que a
-  propria ingestao acabara de marcar `failed`;
+- a falha do dominio CHEGA ao envelope. Se nao chegasse, o job terminaria
+  gravando `concluido` em `job_progress` para um documento que a propria
+  ingestao acabou de marcar `failed`;
 - o dead-letter e o retry mexem TAMBEM na linha do documento. So `job_progress`
   deixaria o documento em `processing` para sempre, e o frontend consulta esse
   documento a cada 3s enquanto ele estiver assim;
-- `CancelledError` (timeout do job, SIGTERM do worker) e tratada e repropagada
-  (C2). Ela deriva de BaseException: nenhum `except Exception` a pega;
-- uma reexecucao apaga os chunks anteriores antes de reprocessar (I1).
+- `CancelledError` (timeout do job, SIGTERM do worker) e tratada e
+  repropagada. Ela deriva de BaseException: nenhum `except Exception` a pega;
+- uma reexecucao apaga os chunks anteriores antes de reprocessar.
 """
 
 import asyncio
@@ -86,8 +85,9 @@ def test_falha_do_job_vai_para_dead_letter(monkeypatch):
 
 def test_falha_real_da_ingestao_nao_e_gravada_como_concluido(monkeypatch):
     # O mesmo caminho do teste acima, mas com a ingestao de verdade no meio: e
-    # este que pega o C1, porque o duble de `process_ingestion` levanta por
-    # construcao e a funcao real (antes do fix) nao levantava nunca.
+    # este que pega uma falha que nao chega ao envelope, porque o duble de
+    # `process_ingestion` levanta por construcao e so a funcao real pode
+    # deixar de levantar.
     chamadas, motor = _instrumentar(monkeypatch)
     _ingestao_que_falha(monkeypatch)
 
@@ -139,7 +139,7 @@ def test_cancelamento_marca_falhou_e_repropaga(monkeypatch):
 
 
 def test_a_ingestao_relanca_a_falha(monkeypatch):
-    # O outro lado do C1, direto: quem decide entre retentativa e fim da linha e
+    # O outro lado do contrato, direto: quem decide entre retentativa e fim da linha e
     # o envelope, entao a ingestao registra `failed` e devolve a excecao.
     motor = MotorFalso()
     monkeypatch.setattr(ingestao, "engine", motor)

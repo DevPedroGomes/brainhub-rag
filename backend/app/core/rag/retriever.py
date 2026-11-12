@@ -163,9 +163,9 @@ def _candidatos(
     search_top_k = top_k * settings.search_candidates_multiplier
     all_results: dict[str, dict] = {}  # keyed by chunk id to deduplicate
 
-    # Todos os embeddings numa chamada so. Um por vez eram 4 requisicoes por
-    # pergunta contra o limite de 3/min do plano Voyage sem cartao: toda
-    # pergunta inedita estourava.
+    # Todos os embeddings numa chamada so. Um por vez seriam 4 requisicoes por
+    # pergunta contra o limite de requisicoes por minuto do provider de
+    # embedding.
     embeddings = get_query_embeddings(consultas)
 
     for q, query_embedding in zip(consultas, embeddings):
@@ -249,8 +249,7 @@ def reconsultar(
 ) -> list[dict]:
     """Passo corretivo: UMA busca com a consulta reescrita, fundida ao lote anterior.
 
-    Antes a reescrita so alimentava a busca web e o acervo nunca era
-    reconsultado. Sem multi-query aqui: o rewrite ja e a variante.
+    Sem multi-query aqui: o rewrite ja e a variante.
 
     Escala: o lote anterior pode vir em "cohere" e a busca nova sempre vem em
     "rrf". Com o reranker ligado, a uniao inteira e reordenada contra

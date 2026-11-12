@@ -1,6 +1,6 @@
 """Uma recusa da fila DESFAZ o que a rota ja tinha feito.
 
-Sem isso, um 429 ainda cobrava a cota do dia, deixava o arquivo orfao no volume
+Sem isso, um 429 ainda cobraria a cota do dia, deixaria o arquivo orfao no volume
 e a linha `pending` para sempre — com o navegador daquele usuario consultando
 ela a cada 3s. Aqui `_recusar_e_desfazer` roda sozinho, com o SQL de verdade
 anotado; pelas tres rotas (enfileiramento com tenant, `job_id` na resposta, a

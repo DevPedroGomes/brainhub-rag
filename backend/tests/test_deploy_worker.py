@@ -1,7 +1,7 @@
 """Prende o que o worker precisa do compose para funcionar de verdade.
 
 Sao afirmacoes sobre arquivos de deploy, nao sobre codigo Python, e mesmo assim
-moram na suite: cada uma delas ja tinha ou teria produzido um worker que PARECE
+moram na suite: cada uma delas, se quebrar, produz um worker que PARECE
 saudavel e nao processa nada — a falha mais cara desta arquitetura, porque o
 upload continua respondendo 200 e o documento simplesmente nunca fica pronto.
 """
@@ -22,8 +22,8 @@ def _envs(servico: dict) -> dict[str, str]:
 
 def test_o_healthcheck_do_worker_pode_reprovar():
     # `CMD-SHELL` roda `/bin/sh -c "<comando>"`, e a linha de comando desse
-    # shell contem o padrao procurado: `pgrep -f 'arq app.jobs.worker'` casava
-    # com o proprio health check e NUNCA reprovava. (E `pgrep` vem do `procps`,
+    # shell contem o padrao procurado: `pgrep -f 'arq app.jobs.worker'` casaria
+    # com o proprio health check e NUNCA reprovaria. (E `pgrep` vem do `procps`,
     # que a imagem `python:3.12-slim` nao traz e o Dockerfile nao instala.)
     teste = WORKER["healthcheck"]["test"]
     assert "pgrep" not in " ".join(teste)

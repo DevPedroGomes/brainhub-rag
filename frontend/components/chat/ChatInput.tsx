@@ -112,8 +112,6 @@ export function ChatInput({
         </div>
 
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-          {/* O recorte no tempo existia no backend e nao tinha controle na tela:
-              "e em marco de 2025?" so era possivel pela voz. */}
           {recorteVisivel ? (
             <div
               className={cn(

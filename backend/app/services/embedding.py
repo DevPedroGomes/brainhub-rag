@@ -19,8 +19,7 @@ def _assert_dim(vector: list[float], model: str) -> None:
 
     Sem isto o erro so aparece no INSERT, como
     `expected 1536 dimensions, not 1024` — que aponta pro banco e nao pro
-    modelo, que e a causa real. Foi assim que a ingestao ficou 100% quebrada
-    por meses sem ninguem notar.
+    modelo, que e a causa real.
     """
     expected = get_settings().embedding_dimensions
     if len(vector) != expected:
@@ -92,8 +91,8 @@ def embed_queries(texts: list[str]) -> list[list[float]]:
     """Embed varias queries numa UNICA chamada ao provider.
 
     A API aceita lista. O custo em tokens e o mesmo de chamar uma a uma, mas
-    conta como 1 requisicao em vez de N — e o limite do plano Voyage sem meio
-    de pagamento e por REQUISICAO (3 por minuto), nao por token.
+    conta como 1 requisicao em vez de N — e o limite de requisicoes por minuto
+    do provider de embedding e por REQUISICAO, nao por token.
     """
     if not texts:
         return []

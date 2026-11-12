@@ -44,7 +44,7 @@ def _quebrar_em_sentencas(text: str, max_tokens: int) -> list[str]:
     O laco de `chunk_text` so fecha um chunk quando `current_chunk` ja tem algo:
     com ele vazio a condicao e falsa e a sentenca entra inteira, qualquer que
     seja o tamanho. Uma pagina sem pontuacao — tabela, balanco, contrato em
-    caixa alta — e UMA sentenca, e virava um chunk de tamanho ilimitado:
+    caixa alta — e UMA sentenca, e viraria um chunk de tamanho ilimitado:
     estoura o limite do embedding, e o trecho que chega ao gerador vira a
     pagina toda.
 

@@ -45,7 +45,7 @@ function ChatPageContent() {
     }
   }, [loading, user, router])
 
-  // Estavel de proposito: recriada a cada render, ela fazia o historico ser
+  // Estavel de proposito: recriada a cada render, ela faria o historico ser
   // buscado de novo a cada token do stream.
   const getTokenAsync = useCallback(async () => getToken() ?? undefined, [getToken])
 
@@ -263,9 +263,8 @@ function ChatPageContent() {
           )}
 
           <div className="mx-auto w-full max-w-3xl space-y-2 px-3 pb-2 sm:px-4">
-            {/* A trilha existia no backend desde a migracao 003 e nao tinha como ser
-                vista: faltava a rota proxy. E o que separa este projeto de um chat
-                de provedor, que devolve a resposta e nunca o caminho ate ela. */}
+            {/* A trilha e o que separa este projeto de um chat de provedor, que
+                devolve a resposta e nunca o caminho ate ela. */}
             <DecisionTrail threadId={threadId} answerCount={answerCount} />
 
             {/* A conversa por voz fica ACIMA do campo de texto, e nao numa pagina

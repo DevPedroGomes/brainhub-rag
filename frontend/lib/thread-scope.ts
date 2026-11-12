@@ -1,8 +1,7 @@
 /**
  * Escopo de documentos de cada conversa, guardado no navegador.
  *
- * O backend nao grava que documentos uma thread usou, entao reabrir uma
- * conversa antiga caia em `/chat` sem `?docs=` e o campo ficava desabilitado.
+ * O backend nao grava que documentos uma thread usou.
  * Aqui fica o ultimo escopo de cada thread aberta neste navegador; sem registro
  * (outro navegador, dados limpos), a conversa segue no acervo inteiro.
  */

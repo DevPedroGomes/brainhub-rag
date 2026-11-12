@@ -2,8 +2,8 @@
 
 POR QUE
 -------
-A perna textual (tsvector + GIN) foi "medida" uma vez com 8 palavras soltas.
-Isso nao e recall: o usuario digita uma PERGUNTA, e `plainto_tsquery` faz AND
+Medir a perna textual (tsvector + GIN) com palavras soltas nao e recall: o
+usuario digita uma PERGUNTA, e `plainto_tsquery` faz AND
 de todos os termos. Com `english` num acervo portugues, "qual", "o", "de",
 "para" viram termos obrigatorios e a pergunta inteira nao casa com nada.
 

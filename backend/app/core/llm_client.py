@@ -1,11 +1,9 @@
 """Unified LLM client supporting Anthropic native SDK + OpenRouter (OpenAI-compat).
 
-The 6 call sites in this codebase historically used
-`anthropic.Anthropic().messages.create(...)` directly. To allow flipping
-provider via env (`LLM_PROVIDER=openrouter`) without touching call sites,
-they all now go through `chat_complete` / `chat_stream` here. The Anthropic
-message shape (system, messages, max_tokens) is preserved as the public
-interface; the OpenRouter path adapts internally.
+To allow flipping provider via env (`LLM_PROVIDER=openrouter`) without
+touching call sites, they all go through `chat_complete` / `chat_stream`
+here. The Anthropic message shape (system, messages, max_tokens) is
+preserved as the public interface; the OpenRouter path adapts internally.
 """
 from __future__ import annotations
 
@@ -93,7 +91,7 @@ def _kwargs_anthropic(model, max_tokens, messages, system, temperature) -> dict:
     """Monta o payload respeitando o que CADA modelo aceita.
 
     Este caminho e o de rollback (producao roda no OpenRouter), e ele nao
-    sobreviveria a um modelo da familia 5 do jeito que estava:
+    sobreviveria a um modelo da familia 5 sem estes dois ajustes:
 
     1. `temperature` — na familia 5 qualquer valor de sampling e 400. O jeito
        de guiar o comportamento passou a ser o prompt.
@@ -175,11 +173,11 @@ def _bloco_para_openai(bloco: dict) -> dict:
     OpenAI-compat, onde imagem NAO e `{"type":"image","source":{...}}` e sim
     `{"type":"image_url","image_url":{"url":"data:<mime>;base64,<...>"}}`.
 
-    Sem esta traducao o bloco de imagem seguia num formato que o outro lado nao
-    reconhece e era simplesmente DESCARTADO: o modelo recebia so o texto
-    "descreva esta imagem", sem imagem nenhuma, e respondia descrevendo uma
-    imagem inventada. Nao dava erro em lugar nenhum — a descricao chegava
-    plausivel e completamente errada, e ia direto para o indice.
+    Sem esta traducao o bloco de imagem seguiria num formato que o outro lado
+    nao reconhece e seria simplesmente DESCARTADO: o modelo receberia so o texto
+    "descreva esta imagem", sem imagem nenhuma, e responderia descrevendo uma
+    imagem inventada. Nao daria erro em lugar nenhum — a descricao chegaria
+    plausivel e completamente errada, e iria direto para o indice.
     """
     if bloco.get("type") != "image":
         return bloco

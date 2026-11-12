@@ -148,9 +148,9 @@ def test_content_length_acima_do_limite_e_413_antes_de_ler_o_corpo(docs, monkeyp
 
 @pytest.mark.parametrize("cabecalhos", [{}, {"content-length": "300"}])
 def test_corpo_sem_content_length_para_de_ser_lido_no_limite(docs, monkeypatch, cabecalhos):
-    """Chunked (sem Content-Length), ou com um Content-Length que mente: o
-    parser gravava o corpo inteiro num temporario antes de qualquer teto.
-    Agora a leitura para logo depois do limite mais a folga."""
+    """Chunked (sem Content-Length), ou com um Content-Length que mente: sem
+    teto na leitura, o parser gravaria o corpo inteiro num temporario. A
+    leitura para logo depois do limite mais a folga."""
     from app.api.routes import documents as rotas
 
     cliente, r = docs

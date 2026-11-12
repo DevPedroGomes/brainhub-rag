@@ -10,8 +10,7 @@ export const metadata: Metadata = {
     "Ask questions across PDFs, images, audio, video and web pages. Inspect source passages, compare document dates and review conflicting information. Try the fictional sample library without an account.",
   authors: [{ name: "Pedro Gomes" }],
   creator: "Pedro Gomes",
-  // Sem openGraph/twitter o link vira URL crua no LinkedIn, no WhatsApp e no
-  // Upwork — que e onde estas demos de facto circulam.
+  // Sem openGraph/twitter o link vira URL crua quando compartilhado.
   openGraph: {
     type: "website",
     url: "https://group-documents.pgdev.com.br",
@@ -42,8 +41,7 @@ export default function RootLayout({
         <div className="app-bg" aria-hidden />
         <div className="app-grid" aria-hidden />
         <AuthProvider>{children}</AuthProvider>
-        {/* Sem e-mail, LinkedIn nem link para o portfolio: esta pagina e link de portfolio no Upwork,
-            que proibe contato nos sites vinculados. O repositorio publico fica. */}
+        {/* Sem e-mail nem links de contato, de proposito: so o link do repositorio. */}
         <footer className="border-t border-white/10 py-6 text-xs text-neutral-400">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p>

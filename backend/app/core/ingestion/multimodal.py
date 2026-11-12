@@ -1,28 +1,18 @@
 """Ingestao de imagem, video e audio.
 
-O que mudou e por que.
-
-Antes, toda modalidade virava TEXTO antes de ser indexada: o Gemini escrevia
-uma legenda da imagem e so a legenda era embedada. Isso tem um limite duro —
-tudo que a legenda nao mencionou deixa de existir para a busca. Uma planta
-baixa, um grafico ou uma tabela viram tres frases, e a pergunta que dependia do
-numero no canto do grafico nunca encontra nada.
-
-Alem disso o caminho estava morto de duas formas: o pacote
-`google-generativeai` foi descontinuado pelo Google, e o modelo configurado
-(`gemini-2.5-flash-preview-04-17`) e endpoint de preview ja retirado.
-
-Agora:
+Embedar so uma legenda da imagem tem um limite duro — tudo que a legenda nao
+mencionou deixa de existir para a busca. Uma planta baixa, um grafico ou uma
+tabela viram tres frases, e a pergunta que dependia do numero no canto do
+grafico nunca encontra nada.
 
 - IMAGEM e VIDEO sao embedados DIRETO pelo `voyage-multimodal-3.5`, no mesmo
   espaco vetorial do texto. Uma pergunta escrita pode recuperar uma figura
   porque os dois vivem no mesmo espaco, nao porque alguem descreveu a figura.
 - A descricao textual continua existindo, mas com outro papel: alimentar o
   BM25 (que so sabe casar palavra) e dar ao gerador algo legivel para citar.
-  Ela nao e mais o que a busca vetorial enxerga. Sai do Claude, que ja esta
-  configurado e pago — uma dependencia a menos.
-- AUDIO o Voyage nao cobre. Vai para o Deepgram, a mesma chave que o
-  Transcripts ja usa.
+  Ela nao e o que a busca vetorial enxerga. Sai do Claude, que ja esta
+  configurado — uma dependencia a menos.
+- AUDIO o Voyage nao cobre. Vai para o Deepgram.
 
 Cada funcao devolve `(texto, imagem_ou_none)`. Quem chama decide o que fazer:
 com imagem, embeda a imagem; sem, embeda o texto.
@@ -209,9 +199,7 @@ def processar_video(data: bytes, filename: Optional[str] = None) -> tuple[str, o
 def transcrever_audio(data: bytes, mime: str) -> tuple[str, None]:
     """(transcricao, None). Audio nao tem embedding proprio: vira texto mesmo.
 
-    O Voyage multimodal cobre texto, imagem e video, nao audio. Deepgram e a
-    escolha aqui porque ja e o provider de audio do portfolio e a integracao ja
-    esta provada no Transcripts.
+    O Voyage multimodal cobre texto, imagem e video, nao audio.
     """
     settings = get_settings()
     if not settings.deepgram_api_key:

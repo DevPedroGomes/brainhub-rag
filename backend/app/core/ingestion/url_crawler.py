@@ -1,8 +1,8 @@
 """URL crawler with SSRF defense.
 
-Ported from the RAG-Crawler showcase. Fetches an HTTP(S) URL using httpx (no
-Playwright — JavaScript-rendered SPAs will return whatever the server responds
-with on first byte) and extracts the visible text via BeautifulSoup.
+Fetches an HTTP(S) URL using httpx (no Playwright — JavaScript-rendered SPAs
+will return whatever the server responds with on first byte) and extracts the
+visible text via BeautifulSoup.
 
 The SSRF guard rejects:
   - non-http(s) schemes
@@ -127,10 +127,7 @@ def validar_e_resolver(url: str) -> Tuple[bool, str, Optional[str]]:
     Sem devolver o IP, quem chama so pode entregar o hostname ao cliente HTTP,
     que resolve o DNS DE NOVO. Entre as duas resolucoes cabe um servidor DNS
     hostil com TTL 0: a primeira responde um IP publico e passa na validacao, a
-    segunda responde 127.0.0.1 e a conexao vai para la.
-
-    Isso foi reproduzido: com o getaddrinfo alternando a resposta, o crawler
-    buscou um servidor em 127.0.0.1 e devolveu o conteudo dele. Ha teste."""
+    segunda responde 127.0.0.1 e a conexao vai para la."""
     try:
         parsed = urlparse(url)
 
@@ -256,8 +253,8 @@ def fetch_and_extract(url: str) -> Tuple[str, Optional[str]]:
 
             # Conecta no IP QUE FOI VALIDADO, nao no hostname. Entregar o
             # hostname ao httpx o faria resolver o DNS de novo, e entre as duas
-            # resolucoes cabe um servidor hostil com TTL 0 — reproduzido: a 1a
-            # resposta passava na validacao e a 2a levava a conexao para
+            # resolucoes cabe um servidor hostil com TTL 0: a 1a resposta
+            # passa na validacao e a 2a leva a conexao para
             # 127.0.0.1. O Host header e o SNI continuam com o nome original,
             # entao o site responde certo e o certificado e conferido contra o
             # nome, nao contra o IP.
@@ -269,8 +266,8 @@ def fetch_and_extract(url: str) -> Tuple[str, Optional[str]]:
 
             # `stream` em vez de `get`: o corpo e lido em pedacos e a conexao
             # e cortada assim que passa do teto. Com `get`, o download inteiro
-            # ja estava na memoria quando o tamanho era conferido — um servidor
-            # hostil anunciando 5 MB e mandando 5 GB enchia a RAM antes da
+            # ja estaria na memoria quando o tamanho fosse conferido — um servidor
+            # hostil anunciando 5 MB e mandando 5 GB encheria a RAM antes da
             # checagem acontecer.
             try:
                 with client.stream(

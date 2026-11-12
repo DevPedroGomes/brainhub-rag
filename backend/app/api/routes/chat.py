@@ -109,7 +109,7 @@ def _e_uuid(valor: str) -> bool:
 
 def validate_thread_ownership(thread_id: str, user_id: str) -> bool:
     # Id que nao e UUID nao e thread de ninguem: sem isto o CAST do Postgres
-    # levantava e a rota respondia 500 em vez de 403.
+    # levantaria e a rota responderia 500 em vez de 403.
     if not _e_uuid(thread_id):
         return False
     with engine.begin() as conn:
@@ -126,7 +126,7 @@ def get_thread_history(thread_id: str, user_id: str, limit: int = 20) -> list[di
     """As `limit` mensagens mais RECENTES da thread, em ordem cronologica.
 
     O corte e feito do fim para o comeco e so depois reordenado: com `ASC LIMIT`
-    a conversa longa entregava as primeiras mensagens, e o modelo deixava de
+    a conversa longa entregaria as primeiras mensagens, e o modelo deixaria de
     ver justamente os turnos que a pergunta atual retoma.
     """
     with engine.begin() as conn:
@@ -377,7 +377,7 @@ async def chat(request: Request, body: ChatBody):
         full_answer = ""
         citations = []
 
-        # A trilha da decisao. Ate aqui esses numeros so existiam dentro do
+        # A trilha da decisao. Sem ela esses numeros so existiriam dentro do
         # painel de workflow, que some quando a pagina recarrega.
         iniciado_em = time.monotonic()
         recuperados: list[dict] = []
@@ -448,8 +448,8 @@ async def chat(request: Request, body: ChatBody):
 
         # Todo passo caro daqui para baixo e sincrono (LLM, embedding, SQL) e
         # roda em thread, nunca no event loop. Com 1 worker do uvicorn, uma
-        # unica pergunta segurava o loop por vezes dezenas de segundos e
-        # congelava TODOS os outros requests do app: login, lista de
+        # unica pergunta seguraria o loop por vezes dezenas de segundos e
+        # congelaria TODOS os outros requests do app: login, lista de
         # documentos, ate o /healthz. Mesmo padrao de process_ingestion.
         loop = asyncio.get_running_loop()
 
@@ -499,8 +499,7 @@ async def chat(request: Request, body: ChatBody):
 
             # Step 3: passo corretivo. Com baixa confianca, a pergunta e
             # reescrita e o ACERVO e reconsultado com ela, antes de qualquer
-            # coisa sair do app. Antes a reescrita so alimentava o Tavily e o
-            # acervo nunca era consultado de novo.
+            # coisa sair do app.
             if baixa_confianca:
                 workflow.append({"step": "transform", "status": "in_progress", "details": "Rewriting query..."})
                 yield _sse("workflow", workflow)
@@ -585,7 +584,7 @@ async def chat(request: Request, body: ChatBody):
             # Passo: as fontes divergem entre si?
             #
             # Dispara depois do grade (so interessa o que sobrou) e roda EM
-            # PARALELO com a geracao: antes rodava em serie e atrasava o primeiro
+            # PARALELO com a geracao: em serie atrasaria o primeiro
             # token. O evento `conflict` sai assim que a checagem termina, entre
             # tokens ou depois do ultimo. O portao e deterministico (dois ou mais
             # documentos do acervo), a checagem e do modelo, e o resultado e
@@ -596,8 +595,7 @@ async def chat(request: Request, body: ChatBody):
                 checagem = loop.run_in_executor(None, detectar_conflito, list(filtered_docs))
                 yield _sse("workflow", workflow)
 
-            # Fontes: do acervo e da web, cada uma com o seu `kind`. Antes a web
-            # ia para o gerador e ficava fora das citacoes.
+            # Fontes: do acervo e da web, cada uma com o seu `kind`.
             citations = [_citacao(d) for d in [*filtered_docs, *resultados_web]]
             if citations:
                 yield _sse("sources", citations)
@@ -661,10 +659,9 @@ async def chat(request: Request, body: ChatBody):
                 checagem = None
                 yield _sse("workflow", workflow)
 
-            # O erro cru do provider NAO vai para a tela. Foi assim que uma
-            # mensagem de rate limit da Voyage, com link do dashboard de
-            # billing e nome do plano, apareceu para o visitante no meio do
-            # stream. O detalhe fica no log, onde serve para depurar.
+            # O erro cru do provider NAO vai para a tela: ele pode trazer link
+            # do dashboard de billing e nome do plano. O detalhe fica no log,
+            # onde serve para depurar.
             logger.error(f"SSE generation error: {e}", exc_info=True)
             yield _sse("error", {"message": "Something went wrong answering that. Please try again."})
 
@@ -772,9 +769,7 @@ async def list_decisions(request: Request, thread_id: str | None = None, limit: 
 def _decision_payload(row) -> dict:
     """Formata a linha, explicando a escala do score em vez de so devolver o numero.
 
-    Um score 0,03 e otimo em RRF e pessimo em Cohere. Mandar o numero cru para a
-    tela sem dizer a escala foi exatamente o bug que fazia toda resposta sair
-    com aviso de baixa confianca.
+    Um score 0,03 e otimo em RRF e pessimo em Cohere.
     """
     escala = row["score_scale"] or "rrf"
     # Em ingles porque e texto de tela, e o painel e em ingles.
@@ -826,9 +821,8 @@ def _montar_grafo(linhas) -> tuple[list[dict], list[dict], list[dict]]:
 
     A aresta DIVERGE liga SO os documentos cujos titulos o aviso citou em
     `conflict.sources`, mapeados para `document_id` pelos trechos de `graded`
-    da mesma decisao. Antes ligava todo par de documentos usados na resposta,
-    e o grafo acusava de contradicao arquivos que nem estavam em causa. Titulo
-    que nao mapeia (ou que mapeia para mais de um documento) nao gera aresta.
+    da mesma decisao. Titulo que nao mapeia (ou que mapeia para mais de um
+    documento) nao gera aresta.
     """
     documentos: dict[str, dict] = {}
     perguntas: list[dict] = []

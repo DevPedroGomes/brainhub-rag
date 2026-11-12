@@ -1,21 +1,19 @@
 /**
  * Conversa por voz continua sobre o acervo, via WebRTC.
  *
- * Migrado do `voice_rag` em 06/09/2026. La a camada estava certa e nao tinha por
- * que existir: um chat de provedor faz voz sobre um PDF melhor do que nos. Aqui
- * ela tem, porque aqui existe acervo, isolamento por usuario e trilha de decisao.
+ * Para voz sobre um PDF solto, um chat de provedor resolve melhor. Esta camada
+ * existe porque aqui ha acervo, isolamento por usuario e trilha de decisao.
  *
- * O audio NAO passa pelo nosso backend. Proxiar midia em tempo real numa VPS de
- * 2 vCPU seria o gargalo, e o WebRTC ja resolve jitter, perda de pacote e eco. O
+ * O audio NAO passa pelo nosso backend. Proxiar midia em tempo real numa VPS
+ * pequena seria o gargalo, e o WebRTC ja resolve jitter, perda de pacote e eco. O
  * backend entra so onde precisa mandar: cunhar a credencial efemera (a chave real
  * da OpenAI nunca chega ao navegador) e executar a busca, para que quem decide o
  * que e relevante continue sendo o grader do servidor.
  *
  * ⚠️ CSP: a troca de SDP e feita DIRETO com api.openai.com. Se `connect-src` no
  * docker-compose deixar de permitir esse host, o botao falha para 100% dos
- * visitantes, em silencio e sem erro no servidor. Ja aconteceu uma vez no
- * voice_rag (commit 21e3642). A CSP daqui hoje e `connect-src 'self' https: wss:`,
- * que cobre; nao aperte sem lembrar disto.
+ * visitantes, em silencio e sem erro no servidor. A CSP daqui hoje e
+ * `connect-src 'self' https: wss:`, que cobre; nao aperte sem lembrar disto.
  */
 
 import { fetchWithAuth } from '@/lib/auth'
@@ -93,11 +91,10 @@ export class RealtimeSession {
     }
     this.threadId = thread_id
 
-    // O backend calcula e devolve `expires_at`, e ele vinha sendo descartado. A
-    // credencial so autentica o POST de SDP inicial — depois do WebRTC de pe,
-    // expirar nao derruba a chamada. Mas se a pessoa demora a liberar o
-    // microfone, ela expira ANTES do POST, e o erro que aparecia era um
-    // generico "Could not open the voice connection".
+    // O backend calcula e devolve `expires_at`. A credencial so autentica o
+    // POST de SDP inicial — depois do WebRTC de pe, expirar nao derruba a
+    // chamada. Mas se a pessoa demora a liberar o microfone, ela expira ANTES
+    // do POST, e o erro seria um generico "Could not open the voice connection".
     const expiraEm = expires_at * 1000 - Date.now()
     if (expiraEm <= 0) {
       throw new Error('The voice session expired before it opened. Try again.')
@@ -186,9 +183,9 @@ export class RealtimeSession {
     // A busca comeca AQUI, e nao no `response.done`. Os argumentos ja estao
     // completos e a fala de preenchimento da MESMA resposta ainda esta tocando,
     // entao os 5-15s de RAG rodam POR BAIXO da fala em vez de depois dela. Com o
-    // gatilho no `response.done` a frase tocava, acabava, e o silencio voltava
-    // inteiro. O evento tambem e emitido quando a resposta e cancelada, dai o
-    // `jaDisparados`.
+    // gatilho no `response.done` a frase tocaria, acabaria, e o silencio
+    // voltaria inteiro. O evento tambem e emitido quando a resposta e
+    // cancelada, dai o `jaDisparados`.
     if (tipo === 'response.function_call_arguments.done') {
       const callId = String(ev.call_id ?? '')
       if (ev.name === 'buscar_no_acervo' && callId && !this.jaDisparados.has(callId)) {
@@ -219,8 +216,8 @@ export class RealtimeSession {
       pergunta = String(args.pergunta ?? '')
       dataDeReferencia = args.data_de_referencia ? String(args.data_de_referencia) : null
 
-      // Sem os ids a voz buscava no acervo inteiro mesmo com documentos
-      // selecionados, enquanto o chat de texto respeitava a selecao.
+      // Sem os ids a voz buscaria no acervo inteiro mesmo com documentos
+      // selecionados, enquanto o chat de texto respeita a selecao.
       const documentos = this.cb.documentos?.() ?? []
       const r = await fetchWithAuth('/api/realtime/tool/buscar', {
         method: 'POST',
@@ -235,7 +232,7 @@ export class RealtimeSession {
         signal: AbortSignal.timeout(20_000),
       })
       // `erro` e campo PROPRIO, nao `baixa_confianca`. Sem separar, o prompt
-      // tratava backend fora do ar como busca vazia e o agente afirmava que nao
+      // trataria backend fora do ar como busca vazia e o agente afirmaria que nao
       // estava nos documentos da pessoa — falso, e justamente a falha que este
       // acervo existe para impedir.
       saida = r.ok ? await r.json() : { trechos: [], erro: 'search_unavailable' }
@@ -265,7 +262,7 @@ export class RealtimeSession {
       this.enviar({ type: 'response.create' })
     }
     // 'falando' sai daqui: quem sabe que ha audio e o `output_audio_buffer.started`.
-    // Setar aqui fazia o rotulo mentir por ~1s antes de existir som.
+    // Setar aqui faria o rotulo mentir por ~1s antes de existir som.
   }
 
   private enviar(payload: unknown): void {

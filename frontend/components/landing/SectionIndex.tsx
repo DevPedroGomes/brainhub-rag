@@ -3,11 +3,9 @@
 /**
  * Indice lateral da landing, com a secao ativa de verdade.
  *
- * Antes o rotulo so aparecia no hover: com o cursor no meio da tela, "PIPELINE"
- * acendia sobre qualquer secao. Agora um IntersectionObserver olha uma faixa
- * fina no meio da viewport (45% a 50% da altura) e a secao que cruza essa faixa
- * e a ativa. Com o formulario de acesso na faixa, nenhum item fica ativo: ele
- * nao esta no indice.
+ * Um IntersectionObserver olha uma faixa fina no meio da viewport (45% a 50%
+ * da altura) e a secao que cruza essa faixa e a ativa. Com o formulario de
+ * acesso na faixa, nenhum item fica ativo: ele nao esta no indice.
  *
  * So aparece a partir de 1700 px, com margem para os rotulos ao lado do
  * container principal sem cobrir os titulos.

@@ -1,10 +1,5 @@
 """Runner de migrations versionadas, idempotente, executado no boot da app.
 
-Motivacao: o schema deste projeto divergiu do codigo em silencio — a coluna
-`chunks.embedding` continuou `vector(1536)` (era OpenAI) depois da migracao pro
-Voyage (1024), e TODA ingestao passou a falhar no INSERT. Ninguem percebeu
-porque nada comparava schema esperado x schema real.
-
 Contrato:
 - Arquivos ficam em `backend/migrations/NNN_nome.sql`, aplicados em ordem numerica.
 - Cada arquivo roda UMA vez, dentro de UMA transacao, e e registrado em

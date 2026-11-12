@@ -6,9 +6,9 @@ O que se prende aqui, e o porquê de cada um:
   `function_call` é montado pelo modelo e repassado pelo NAVEGADOR. Se a busca
   aceitasse um identificador de usuário vindo do corpo, bastaria editar um JSON
   no console para ler o acervo de outra pessoa.
-- **A tool tem que gravar a trilha.** É o motivo inteiro de a voz ter migrado do
-  `voice_rag` para cá. Uma refatoração que devolva os trechos sem gravar deixa a
-  demo "funcionando" e sem provar nada, que é a forma mais cara de quebrar.
+- **A tool tem que gravar a trilha.** Uma refatoração que devolva os trechos sem
+  gravar deixa a demo "funcionando" e sem provar nada, que é a forma mais cara de
+  quebrar.
 - **As duas obrigações do prompt.** Avisar sobre divergência e dizer qual recorte
   no tempo usou são o que o acervo permite e o chat de provedor não faz. Elas
   vivem numa string, e string some numa edição distraída sem quebrar teste nenhum.
@@ -64,8 +64,7 @@ def voz(monkeypatch):
 
 
 def test_a_busca_usa_o_user_id_do_jwt_e_grava_a_trilha_com_as_consultas(voz):
-    """O cliente nao escolhe de quem e o acervo, e a tool grava a trilha: e o
-    motivo inteiro de a voz ter saido do voice_rag."""
+    """O cliente nao escolhe de quem e o acervo, e a tool grava a trilha."""
     from tests.dubles_chat import USUARIO, trecho
 
     cliente, cenario = voz
@@ -316,11 +315,11 @@ def test_o_trecho_devolvido_nomeia_a_fonte(campo):
 
 
 def test_a_voz_le_o_texto_que_a_busca_devolve(voz):
-    """O bug que este teste existe para impedir: a rota de voz lia
-    `t["content"]`, mas a busca devolve `snippet`. O agente recebia o nome do
-    arquivo com o texto VAZIO e, proibido de responder de memoria, dizia "nao
-    esta nos seus documentos" em 100% das perguntas. Contra a busca de verdade
-    (SQL real), em tests/test_integracao_busca.py."""
+    """A busca devolve `snippet`: se a rota de voz lesse `t["content"]`, o
+    agente receberia o nome do arquivo com o texto VAZIO e, proibido de
+    responder de memoria, diria "nao esta nos seus documentos" em 100% das
+    perguntas. Contra a busca de verdade (SQL real), em
+    tests/test_integracao_busca.py."""
     from tests.dubles_chat import trecho
 
     cliente, cenario = voz
@@ -547,9 +546,9 @@ def test_transcricao_da_entrada_e_configurada_porque_o_navegador_a_escuta(sessao
 
     `audio.input.transcription` nasce null na API. Sem configurar, o evento
     `conversation.item.input_audio_transcription.completed` NUNCA e emitido — e
-    `realtime-session.ts` tem um listener para ele. O resultado era um listener
+    `realtime-session.ts` tem um listener para ele. O resultado seria um listener
     morto e metade da linha do tempo do painel vazia: so a fala do agente
-    aparecia, a da pessoa nunca.
+    apareceria, a da pessoa nunca.
     """
     from app.config.settings import get_settings
 
@@ -567,7 +566,7 @@ def test_transcricao_da_entrada_e_configurada_porque_o_navegador_a_escuta(sessao
 
 
 def test_turn_detection_e_explicito_e_nao_herdado(sessao):
-    """O default e threshold 0.5 / silencio 500ms, e ninguem sabia disso.
+    """O default e threshold 0.5 / silencio 500ms.
 
     Com a frase de preenchimento o agente fala muito mais, e 0.5 realimenta pelo
     alto-falante. 500ms tambem corta quem pausa para pensar.
@@ -595,7 +594,7 @@ def test_o_modelo_e_mandado_falar_antes_de_buscar():
 def test_erro_de_busca_e_campo_proprio_e_o_prompt_sabe_le_lo():
     """Lista vazia e "nao esta no acervo". `erro` e "nao consegui olhar".
 
-    Sem separar, um 500 do backend fazia o agente afirmar com confianca que o
+    Sem separar, um 500 do backend faria o agente afirmar com confianca que o
     documento da pessoa nao continha aquilo — falso, e justamente a falha que
     este acervo existe para impedir.
     """
@@ -652,12 +651,12 @@ def test_a_queda_da_conexao_e_observada():
 
 
 def test_a_validade_da_credencial_nao_e_descartada():
-    """O backend calcula `expires_at` e devolve; o front ignorava.
+    """O backend calcula `expires_at` e devolve; o front tem de usar.
 
     A credencial so autentica o POST de SDP inicial, entao expirar depois nao
     derruba a chamada. Mas se a pessoa demora a liberar o microfone ela expira
-    ANTES, e o erro exibido era um generico "Could not open the voice
-    connection" — que manda investigar a coisa errada.
+    ANTES, e sem a validade o erro exibido seria um generico "Could not open the
+    voice connection" — que manda investigar a coisa errada.
     """
     sessao = (FRONTEND / "lib" / "realtime-session.ts").read_text()
     assert "expires_at" in sessao, "o front voltou a descartar a validade da credencial"

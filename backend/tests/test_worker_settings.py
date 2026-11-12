@@ -68,10 +68,10 @@ def test_o_timeout_cabe_uma_ingestao_longa():
 
 
 def test_o_worker_resolve_o_redis_pela_config_compartilhada():
-    # As duas pontas da MESMA fila. Lendo a env na mao, o worker tinha default
+    # As duas pontas da MESMA fila. Lendo a env na mao, o worker teria default
     # `redis://redis:6379` e o web (via `get_config`) `redis://localhost:6379`:
-    # faltando a env no container, o web falha alto e o worker atende calado uma
-    # fila que nunca recebe nada.
+    # faltando a env no container, o web falharia alto e o worker atenderia
+    # calado uma fila que nunca recebe nada.
     esperado = RedisSettings.from_dsn(get_config().redis_url)
     assert worker.WorkerSettings.redis_settings.host == esperado.host
     assert worker.WorkerSettings.redis_settings.port == esperado.port

@@ -1,10 +1,5 @@
 """O `.env.example` e o que alguem copia para subir o app, entao ele tem de bater
 com o que o codigo le.
-
-Ele ja fixou um modelo retirado (`claude-sonnet-4-20250514`), um modelo de
-embedding so de texto que quebra a ingestao multimodal, envs que nada le
-(Google, Langfuse) e deixou de fora OPENAI_API_KEY, DEEPGRAM_API_KEY,
-LLM_PROVIDER e os tetos diarios.
 """
 
 from pathlib import Path

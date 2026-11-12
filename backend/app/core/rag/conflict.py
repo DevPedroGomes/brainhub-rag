@@ -24,8 +24,7 @@ COMO A DECISAO E TOMADA, e onde o modelo entra:
   coisa" nao e divergencia do acervo.
 
 CUSTO: usa o modelo barato, com teto de tokens, e passa pelo mesmo orcamento
-diario do chat. Sem isso seria uma chamada paga fora do medidor, que e
-exatamente o defeito que a auditoria de agosto encontrou em outro projeto.
+diario do chat. Sem isso seria uma chamada paga fora do medidor.
 """
 
 from __future__ import annotations

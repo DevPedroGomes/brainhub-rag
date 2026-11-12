@@ -31,7 +31,7 @@ export function ChatHistory({
   const [isLoading, setIsLoading] = useState(false)
 
   // `getToken` num ref: se quem chama recriar a funcao a cada render, a lista
-  // nao pode ser buscada de novo por isso. Antes era buscada a cada token.
+  // nao pode ser buscada de novo por isso.
   const getTokenRef = useRef(getToken)
   useEffect(() => {
     getTokenRef.current = getToken

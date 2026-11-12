@@ -60,8 +60,8 @@ async def ingerir(ctx, doc_id: str, user_id: str, storage_path: str) -> None:
     """Envelope da ingestao: progresso, retentativa e dead-letter.
 
     Todo caminho de saida daqui deixa `job_progress` e `documents` CONTANDO A
-    MESMA HISTORIA. Enquanto `process_ingestion` engolia a propria excecao, este
-    envelope caia no `else` e gravava `concluido` para um documento `failed`.
+    MESMA HISTORIA. Se `process_ingestion` engolisse a propria excecao, este
+    envelope cairia no `else` e gravaria `concluido` para um documento `failed`.
     """
     job_id = ctx["job_id"]
     queue.marcar(
@@ -131,8 +131,8 @@ async def _ao_subir(ctx) -> None:
     um do outro antes de rodar `aplicar_schema`, entao a corrida de
     `pg_type`/`pg_class` deixa de ser alcancavel.
 
-    O `try/except` continua aqui, agora como cinto-e-suspensorio: o worker
-    PRECISA subir mesmo sozinho (sem o web por perto, ou se o lock falhar por
+    O `try/except` fica aqui como cinto-e-suspensorio: o worker PRECISA subir
+    mesmo sozinho (sem o web por perto, ou se o lock falhar por
     algum motivo de infra), entao nunca faz sentido derrubar o boot por causa
     disto. O `except` e amplo de proposito (nao so a excecao da corrida), mas o
     log preserva o traceback e o tipo, entao um problema de schema genuino
@@ -146,8 +146,7 @@ async def _ao_subir(ctx) -> None:
             # um lock orfao de uma sessao pendurada) prende o worker no
             # `on_startup`: o container fica de pe sem consumir job nenhum, que e
             # a falha mais silenciosa possivel numa fila. Com o timeout, a espera
-            # vira excecao e cai no `except` tolerante abaixo — que e o que este
-            # docstring ja prometia que acontecia.
+            # vira excecao e cai no `except` tolerante abaixo.
             conn.execute(sqltext("SET lock_timeout = '30s'"))
             conn.execute(sqltext("SELECT pg_advisory_lock(:k)"), {"k": _LOCK_KEY})
             queue.aplicar_schema(engine)
@@ -174,8 +173,8 @@ def _apagar_convidados_vencidos() -> int:
     """Apaga os convidados vencidos com as conversas e trilhas deles; devolve quantos.
 
     Apaga explicitamente, numa transacao, em vez de confiar no CASCADE: em
-    `decisions` o `user_id` nao tem chave estrangeira, e o banco de producao
-    nasceu de um `init.sql` anterior as migrations. Convidado nao grava
+    `decisions` o `user_id` nao tem chave estrangeira, e um banco criado antes
+    das migrations pode nao ter as mesmas chaves. Convidado nao grava
     documento, entao nao ha arquivo nem chunk a remover.
     """
     with engine.begin() as conn:
@@ -220,9 +219,9 @@ class WorkerSettings:
     cron_jobs = [cron(limpar_convidados, minute={0, 15, 30, 45}, run_at_startup=False)]
     on_startup = _ao_subir
     # A MESMA resolucao que o lado que enfileira usa (`queue.criar_pool` tambem
-    # le `get_config().redis_url`). Ler a env na mao aqui criava defaults
+    # le `get_config().redis_url`). Ler a env na mao aqui criaria defaults
     # divergentes nas duas pontas de uma fila so: faltando a env no container, o
-    # web falhava alto (`localhost` sem Redis) e o worker se conectava calado a
+    # web falharia alto (`localhost` sem Redis) e o worker se conectaria calado a
     # OUTRO Redis, ficando ocioso numa fila que nunca recebe nada.
     redis_settings = RedisSettings.from_dsn(get_config().redis_url)
     # Dimensionado para a VPS de 2 nucleos. A ingestao e I/O-bound (espera de

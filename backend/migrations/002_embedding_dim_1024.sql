@@ -1,21 +1,19 @@
 -- 002: Corrige a dimensao dos vetores de 1536 (OpenAI) para 1024 (Voyage).
 --
--- BUG QUE ISTO CORRIGE: o codigo migrou pra Voyage (`voyage-3-large`, 1024
--- dims) mas as colunas continuaram `vector(1536)`, herdadas do
--- `text-embedding-3-small`. Resultado: TODA ingestao morria no INSERT com
+-- Com o codigo no Voyage (`voyage-3-large`, 1024 dims) e as colunas em
+-- `vector(1536)`, herdadas do `text-embedding-3-small`, TODA ingestao morre
+-- no INSERT com
 --     ValueError: expected 1536 dimensions, not 1024
--- e a tabela `chunks` ficou vazia desde sempre — o RAG nunca teve o que
--- recuperar. Confirmado em producao em 2026-07-25.
 --
--- Bug irmao, corrigido no codigo junto com esta migration: `embed_query` usava
--- `voyage-3-lite` (512 dims) contra documentos de `voyage-3-large` (1024).
--- Alinhar so a coluna NAO bastaria — a busca continuaria quebrando com
+-- Alinhar so a coluna NAO basta: query embedada com outro modelo (ex.
+-- `voyage-3-lite`, 512 dims) quebra a busca com
 -- "different vector dimensions 1024 and 512". Modelos diferentes produzem
 -- espacos vetoriais nao-comparaveis; no Voyage quem diferencia os dois lados e
 -- o `input_type`, nao o modelo.
 --
--- SEGURANCA DO DADO: nao ha perda. `chunks` esta vazia (nenhuma ingestao
--- jamais teve sucesso) e `semantic_cache` e cache descartavel com TTL de 1h.
+-- SEGURANCA DO DADO: nao ha perda. Com a dimensao errada nenhum INSERT em
+-- `chunks` passa, entao ela esta vazia, e `semantic_cache` e cache descartavel
+-- com TTL de 1h.
 -- Embeddings de 1536 dims nao poderiam ser convertidos para 1024 de qualquer
 -- forma — teriam que ser regerados a partir do texto.
 
@@ -47,7 +45,8 @@ CREATE INDEX semantic_cache_embedding_idx ON semantic_cache
 -- Assinatura muda => o DROP precisa ser explicito.
 DROP FUNCTION IF EXISTS search_similar_chunks(vector, double precision, integer, uuid[]);
 
--- Documentos ja marcados como falha por causa DESTE bug voltam para a fila.
+-- Documentos ja marcados como falha por causa DESTA divergencia de dimensao
+-- voltam para a fila.
 -- Sao reprocessaveis: o arquivo original continua em disco.
 UPDATE documents
    SET status = 'pending',

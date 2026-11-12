@@ -15,7 +15,7 @@ Espelha exatamente o que `POST /documents/upload` faz, na mesma ordem:
 
 Não chama a rota HTTP de propósito: ela exige JWT, aplica rate limit por IP e
 consome a cota diária de visitante. Nada disso deveria valer para uma operação
-de manutenção feita pelo dono da máquina.
+de manutenção feita pelo operador.
 
 ⚠️ O TETO DIÁRIO É DELIBERADAMENTE PULADO
 ------------------------------------------
@@ -26,18 +26,12 @@ sem cota para o resto do dia, que é o oposto do que o teto existe para proteger
 O gasto real continua acontecendo e continua sendo do operador: use `--limite`
 para semear em lotes e `--estimar` para ver o tamanho antes.
 
-⚠️ O LIMITE DA CONTA VOYAGE MANDA NO RITMO
+⚠️ O LIMITE DE TAXA DA VOYAGE MANDA NO RITMO
 -------------------------------------------
-Medido em 06/09/2026, semeando 10 documentos: **2 falharam** com `RateLimitError`.
-A conta Voyage está sem forma de pagamento, e nesse estado o limite é de
-**3 requisições por minuto**. Como a ingestão faz uma chamada de embedding por
-documento, semear 500 levaria ~2h48 no melhor caso, e na prática o que acontece é
-o job estourar a retentativa e cair na dead-letter.
-
-O conserto não é código: é adicionar forma de pagamento no dashboard da Voyage.
-Os 200M tokens gratuitos continuam valendo depois disso, então **não passa a
-custar** — só destrava o limite. Enquanto isso não acontecer, use `--rpm 3`, que
-espaça o enfileiramento para caber no limite.
+A Voyage limita requisições por minuto, e o limite depende da conta. Como a
+ingestão faz uma chamada de embedding por documento, semear acima do limite faz
+o job estourar a retentativa e cair na dead-letter. Use `--rpm`, que espaça o
+enfileiramento para caber no limite.
 
 IDEMPOTENTE
 -----------
@@ -340,7 +334,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description="Semeia o acervo de demonstração da Aurora.")
     # NAO usar TLD reservado (.local, .test, .example, .invalid): o `email-validator`
     # que valida o /auth/login recusa todos eles. A conta criada direto por SQL
-    # existiria e nunca conseguiria entrar. Descoberto em 06/09/2026, semeando.
+    # existiria e nunca conseguiria entrar.
     p.add_argument("--email", default="demo@gomio.com.br")
     p.add_argument("--senha", default=None,
                    help=f"senha da conta demo (ou env ACERVO_DEMO_SENHA), minimo {MINIMO_SENHA} caracteres")
@@ -348,7 +342,7 @@ def main() -> None:
     p.add_argument("--limite", type=int, default=0, help="semeia no máximo N nesta execução (0 = todos)")
     p.add_argument("--rpm", type=float, default=0,
                    help="espaça o enfileiramento para N documentos por minuto (0 = sem freio). "
-                        "Use 3 enquanto a conta Voyage estiver sem forma de pagamento.")
+                        "Use o limite de requisições por minuto da conta Voyage.")
     p.add_argument("--pdfs", type=Path, default=Path("/tmp/acervo-demo"))
     p.add_argument("--estimar", action="store_true", help="não escreve nada; só diz o tamanho do trabalho")
     p.add_argument("--limpar", action="store_true", help="apaga o acervo semeado desta conta e sai")

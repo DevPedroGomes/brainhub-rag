@@ -13,7 +13,7 @@ httpx>=0.24,<1.0
 
 # Auth (local JWT)
 PyJWT>=2.9,<3
-# passlib removed - using bcrypt directly
+# bcrypt directly, no passlib
 bcrypt>=4.0.0
 
 # LLM & RAG
@@ -24,7 +24,7 @@ voyageai>=0.3.0
 cohere>=7.0
 tiktoken>=0.7.0
 
-# Nucleo compartilhado do portfolio: teto de gasto, trilha de decisao e fila.
+# Nucleo compartilhado: teto de gasto, trilha de decisao e fila.
 # Pinado por tag: um `main` que anda sozinho quebraria producao sem commit aqui.
 agent-ops @ git+https://github.com/DevPedroGomes/agent-ops.git@v0.2.0
 
@@ -45,7 +45,7 @@ tavily-python>=0.5.0
 # Ingestion
 pypdf==6.21.4
 # Render de pagina escaneada (caminho visual) + manipulacao de imagem para o
-# embedding multimodal. Substituem o google-generativeai, que saiu.
+# embedding multimodal.
 PyMuPDF>=1.24
 Pillow>=10.0
 python-magic==0.4.27

@@ -84,8 +84,3 @@ messages = Table(
     Column("citations", JSON),
     Column("created_at", TIMESTAMP(timezone=True), server_default=func.now()),
 )
-
-# A tabela `semantic_cache` foi declarada aqui e nunca escrita nem lida por
-# nenhum caminho do codigo — cache semantico de resposta jamais foi
-# implementado. Removida junto com as configs `semantic_cache_*`; a migration
-# 007 dropa a tabela.

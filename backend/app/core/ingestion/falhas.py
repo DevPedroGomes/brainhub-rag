@@ -126,6 +126,6 @@ def _classificar(exc: BaseException) -> Falha:
     if isinstance(exc, _ilegiveis()):
         return Falha(True, ARQUIVO_ILEGIVEL)
 
-    # Desconhecida continua retentando, como antes: tratar como permanente
+    # Desconhecida continua retentando: tratar como permanente
     # perderia o documento num soluco que ninguem previu aqui.
     return Falha(False, DESCONHECIDA)

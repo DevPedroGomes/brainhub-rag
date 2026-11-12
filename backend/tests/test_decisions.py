@@ -6,8 +6,8 @@ O que se prende aqui:
 - gravar a trilha nunca pode derrubar a resposta que o visitante ja recebeu;
 - a trilha e gravada tambem quando a geracao FALHA, que e justamente o caso em
   que alguem vai querer saber ate onde o pipeline chegou;
-- o payload explica a ESCALA do score. Mandar 0,03 sem dizer que e RRF foi o
-  bug que fez toda resposta sair com aviso de baixa confianca.
+- o payload explica a ESCALA do score. Mandar 0,03 sem dizer que e RRF faz
+  toda resposta parecer de baixa confianca.
 """
 
 from pathlib import Path
@@ -136,10 +136,10 @@ def test_payload_explica_a_escala_do_score_em_ingles():
 
     assert "RRF" in rrf["score_scale_hint"]
     assert rrf["reranked"] is False
-    # O painel e em ingles; a dica em portugues aparecia no meio dele.
+    # O painel e em ingles; a dica em portugues apareceria no meio dele.
     assert "from 0 to 1" in cohere["score_scale_hint"]
     assert cohere["reranked"] is True
-    # A dica precisa existir sempre: numero sem escala e o que enganava.
+    # A dica precisa existir sempre: numero sem escala e o que engana.
     assert chat_route._decision_payload(_linha("qualquer"))["score_scale_hint"] == "Unknown score scale."
 
 
@@ -380,7 +380,7 @@ def test_deteccao_pode_ser_desligada_por_configuracao(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_as_of_invalido_e_recusado_antes_de_chegar_no_banco():
-    # String livre chegava no CAST do Postgres e virava 500 no meio do stream.
+    # String livre chegaria no CAST do Postgres e viraria 500 no meio do stream.
     with pytest.raises(ValidationError):
         chat_route.ChatBody(message="oi", as_of="mes passado")
 
@@ -396,8 +396,6 @@ def test_as_of_vazio_vira_nulo():
 
 # O corte em si (data do DOCUMENTO, nas duas pernas, inclusivo no dia, com
 # `uploaded_at` de reserva) roda com SQL real em tests/test_integracao_busca.py.
-# Os testes que ficavam aqui liam o fonte e prendiam o corte em `uploaded_at`,
-# que era o bug.
 
 
 # ---------------------------------------------------------------------------
@@ -448,8 +446,8 @@ def test_web_nao_vira_no_do_acervo():
 
 
 def test_divergencia_liga_so_o_par_citado():
-    """Antes ligava todo par de documentos usados: tres documentos e um aviso
-    entre dois deles viravam tres arestas DIVERGE."""
+    """Ligar todo par de documentos usados faria tres documentos e um aviso
+    entre dois deles virarem tres arestas DIVERGE."""
     conflito = {"summary": "O prazo difere.", "sources": ["contrato ", "Aditivo"], "vigente": "Aditivo"}
 
     docs, _, arestas = chat_route._montar_grafo([_decisao("1", [

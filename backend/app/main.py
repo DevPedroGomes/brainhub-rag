@@ -22,8 +22,8 @@ async def _lifespan(app: FastAPI):
     """Aplica migrations pendentes antes de aceitar trafego.
 
     Deliberadamente FATAL: se o schema nao puder ser levado ao estado esperado,
-    a app nao sobe. E o oposto do que acontecia antes — schema divergente do
-    codigo, app subindo normal, e toda ingestao falhando em silencio.
+    a app nao sobe. Subir com schema divergente do codigo deixaria toda
+    ingestao falhando em silencio.
     """
     run_migrations()
 

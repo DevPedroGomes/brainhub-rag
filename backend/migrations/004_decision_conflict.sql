@@ -3,7 +3,7 @@
 -- MOTIVACAO: citar a fonte nao diz nada quando o acervo tem o contrato de 2023
 -- e o aditivo de 2025 falando da mesma clausula. O RAG recupera os dois, o
 -- gerador escolhe um e responde com confianca; quem le nao descobre que existia
--- outra versao. Agora, quando os trechos que sobraram vem de dois ou mais
+-- outra versao. Quando os trechos que sobraram vem de dois ou mais
 -- documentos, uma checagem barata pergunta se eles divergem, e o aviso fica
 -- guardado junto da decisao que o produziu.
 --

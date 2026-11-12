@@ -90,8 +90,8 @@ export function ChatMessage({ message, onCitationClick }: ChatMessageProps) {
 }
 
 /**
- * A divergencia entre fontes, na propria resposta. Antes ela so existia como
- * uma linha no painel de passos, que some quando o stream termina.
+ * A divergencia entre fontes, na propria resposta: o painel de passos some
+ * quando o stream termina.
  */
 function AvisoDeDivergencia({ conflito }: { conflito: ConflictEvent }) {
   const fontes = Array.isArray(conflito.sources) ? conflito.sources : []

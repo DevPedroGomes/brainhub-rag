@@ -1,12 +1,5 @@
 """Conversa por voz sobre o acervo. O RAG vira uma tool, não o meio do pipeline.
 
-DE ONDE ISTO VEIO
------------------
-A camada de tempo real foi construída no repositório `voice_rag` e migrada para
-cá em 06/09/2026. Lá ela estava certa e não tinha por quê: um chat de provedor
-faz voz sobre um PDF melhor do que nós. Aqui ela tem, porque aqui existe acervo,
-isolamento por usuário e trilha de decisão. Ver `voice_rag/docs/EXTRACAO-PARA-BRAINHUB.md`.
-
 O DESENHO
 ---------
     navegador ⟷ WebRTC ⟷ OpenAI Realtime
@@ -18,11 +11,11 @@ O modelo fala e escuta ao mesmo tempo, e chama a busca no meio da frase. O ganho
 não é só latência: a pessoa interrompe, muda de assunto e volta, e a conversa
 continua, porque não existe mais "um turno" a concluir.
 
-O QUE MUDA EM RELAÇÃO AO ORIGINAL, E É O MOTIVO DA MIGRAÇÃO
-------------------------------------------------------------
-Lá a tool devolvia os trechos e acabava. Aqui ela **grava em `decisions`**: quais
-trechos entraram, quantos o grader manteve, se houve divergência entre fontes,
-qual recorte no tempo foi usado, e quanto demorou.
+A TRILHA DE DECISÃO
+-------------------
+A tool **grava em `decisions`**: quais trechos entraram, quantos o grader
+manteve, se houve divergência entre fontes, qual recorte no tempo foi usado, e
+quanto demorou.
 
 Consequência: a trilha passa a ser escrita **enquanto a pessoa fala**, e o painel
 ao lado se preenche sozinho. Um chat de provedor devolve a resposta; este devolve
@@ -205,7 +198,7 @@ class BuscaResposta(BaseModel):
 
     Campo proprio, e nao `baixa_confianca`, porque os dois casos sao diferentes e
     o prompt trata cada um de um jeito: vazio significa "nao esta no acervo";
-    `erro` significa "nao consegui olhar". Sem essa separacao, um 500 fazia o
+    `erro` significa "nao consegui olhar". Sem essa separacao, um 500 faria o
     agente afirmar com confianca que o documento da pessoa nao continha aquilo."""
 
 
@@ -255,7 +248,7 @@ async def criar_sessao(request: Request) -> SessaoResposta:
                 "input": {
                     # Sem isto a transcricao da entrada nasce null e o evento
                     # `input_audio_transcription.completed` nunca chega: metade
-                    # da linha do tempo do painel ficava vazia. Sem `language` de
+                    # da linha do tempo do painel ficaria vazia. Sem `language` de
                     # proposito — o prompt manda o agente trocar de idioma junto
                     # com a pessoa, e pinar um idioma mataria isso.
                     "transcription": {"model": settings.realtime_transcribe_model},
@@ -340,7 +333,7 @@ async def executar_busca(request: Request, body: BuscaPedido) -> BuscaResposta:
         raise HTTPException(403, "Thread does not belong to this user")
 
     # Teto proprio, consumido depois das checagens gratis e antes de qualquer
-    # chamada paga. Sem ele, uma sessao de voz aberta disparava buscas sem fim.
+    # chamada paga. Sem ele, uma sessao de voz aberta dispararia buscas sem fim.
     await consumir_cota("realtime_busca", settings.daily_realtime_tool_limit)
 
     iniciado_em = time.monotonic()

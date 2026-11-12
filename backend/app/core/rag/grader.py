@@ -1,23 +1,17 @@
 """Filtragem dos chunks recuperados, ciente da ESCALA do score.
 
-O bug que este arquivo existia para causar:
-
 `relevance_score` chega aqui vindo de duas origens completamente diferentes.
 Quando o reranker da Cohere roda, e uma relevancia calibrada entre 0 e 1.
 Quando ele nao roda — chave ausente ou ENABLE_RERANKING=false — o campo
 continua sendo o score de Reciprocal Rank Fusion do `hybrid_search`, cujo
 maximo teorico e `2 / (rrf_k + 1)`: com rrf_k=60, **0,0328**.
 
-O limiar era um numero absoluto (0.7) comparado contra os dois. Com a Cohere
-desligada isso descartava 100% dos documentos em TODA pergunta, sempre. A rede
-de seguranca entao devolvia 2 chunks em vez de 5, e `needs_web_search` ficava
-permanentemente ligado, disparando um rewrite pago de query a cada pergunta.
-
-A licao nao e "religar a Cohere". E que um limiar absoluto nao pode ser
-comparado contra uma escala que o codigo nao controla: a Cohere serve hoje
-`rerank-v3.5` e a geracao `rerank-v4.0-*`, com distribuicoes de score
-diferentes entre si. Qualquer numero fixo aqui volta a estar errado no dia em
-que o modelo configurado muda.
+Um limiar absoluto (0.7) comparado contra os dois descartaria 100% dos
+documentos em TODA pergunta com a Cohere desligada. E nenhum limiar absoluto
+pode ser comparado contra uma escala que o codigo nao controla: a Cohere serve
+hoje `rerank-v3.5` e a geracao `rerank-v4.0-*`, com distribuicoes de score
+diferentes entre si. Qualquer numero fixo aqui fica errado no dia em que o
+modelo configurado muda.
 
 Entao: o limiar absoluto so se aplica quando o score e sabidamente calibrado.
 Sem isso, nao ha filtragem honesta a fazer — os candidatos que chegam aqui JA
@@ -46,9 +40,8 @@ def grade_documents(
 
     `low_confidence` e verdadeiro so quando NADA passou o limiar calibrado
     (escala cohere) ou quando o lote e menor que o minimo saudavel (escala rrf).
-    O gatilho antigo, "menos da metade passou", disparava no caso normal (dois
-    bons em cinco) e pagava um rewrite a toa. O grader so reporta; quem
-    reconsulta o acervo e avisa o gerador e o chamador.
+    O grader so reporta; quem reconsulta o acervo e avisa o gerador e o
+    chamador.
     """
     if not documents:
         return [], True

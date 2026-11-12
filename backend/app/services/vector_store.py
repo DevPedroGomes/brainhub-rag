@@ -123,7 +123,7 @@ DATA_EFETIVA_SQL = "COALESCE(d.effective_date, CAST(d.uploaded_at AT TIME ZONE '
 
 # O HNSW so devolve `ef_search` candidatos (default 40 no pgvector), e os
 # filtros por dono, documento e data rodam DEPOIS do scan do indice. Com 40,
-# abaixo do proprio LIMIT, tenant pequeno e consulta filtrada perdiam vizinho
+# abaixo do proprio LIMIT, tenant pequeno e consulta filtrada perderiam vizinho
 # semantico. Usa o dobro do LIMIT, com piso, sem passar do teto do pgvector.
 _EF_SEARCH_PISO = 100
 _EF_SEARCH_TETO = 1000
@@ -155,8 +155,8 @@ def hybrid_search(
 
     `as_of` responde com o acervo como ele VALIA numa data: so entram
     documentos cuja data efetiva (`DATA_EFETIVA_SQL`) e ate aquele dia,
-    inclusive. Antes o corte era `uploaded_at`, e um acervo inteiro subido
-    num mes so devolvia ZERO trechos para "e em marco de 2025?". Filtra pelo
+    inclusive. Com o corte em `uploaded_at`, um acervo inteiro subido num mes
+    so devolveria ZERO trechos para "e em marco de 2025?". Filtra pelo
     documento, nao pelo chunk: reprocessar um documento nao deve fazer ele
     aparecer num recorte anterior a data dele.
 
@@ -167,11 +167,9 @@ def hybrid_search(
        e onde ele entra. Mandar esse resumo para o gerador faz o modelo ler o
        resumo que outro modelo escreveu, em vez do documento — ruido e risco de
        alucinacao, sem ganho.
-    2. O corte era em 500 caracteres. Chunks tem 500 TOKENS (~2000 caracteres),
-       entao o gerador recebia menos de um terco do chunk, cortado no meio de
-       uma frase. Com enriquecimento ficava pior: o prefixo de contexto ocupava
-       ~300 desses 500 e sobravam ~200 de documento de verdade. Media as duas
-       coisas e a feature de qualidade estava degradando a resposta.
+    2. Chunks tem 500 TOKENS (~2000 caracteres): um corte em 500 caracteres
+       entregaria ao gerador menos de um terco do chunk, cortado no meio de
+       uma frase.
        O teto de 4000 aqui e so um limite de sanidade, acima do tamanho de um
        chunk; nao corta conteudo em uso normal.
 

@@ -75,8 +75,8 @@ def _docs(resultados: list[dict]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def test_pergunta_completa_em_portugues_acha_o_trecho_pela_palavra_chave(banco_limpo):
-    """Com 'english' e AND, "qual", "o", "de" viravam termos obrigatorios e a
-    pergunta nao casava nada. Com OR, se alguma metade deixasse "de" virar
+    """Com 'english' e AND, "qual", "o", "de" virariam termos obrigatorios e a
+    pergunta nao casaria nada. Com OR, se alguma metade deixasse "de" virar
     termo, a ata (que so tem "de" em comum) voltaria junto. O eixo da consulta
     nao e de trecho nenhum: quem acha e a perna textual, e sem acento."""
     u = _usuario()
@@ -439,8 +439,8 @@ def test_crawl_recusa_data_invalida(cliente_docs, invalida):
 
 
 def test_lista_de_documentos_devolve_erro_preso_e_data_efetiva(cliente_docs):
-    """O SELECT ja projetava `erro` e `preso` e o dict da resposta os
-    descartava: o badge "Failed"/"Stalled" da tela nunca aparecia."""
+    """O SELECT projeta `erro` e `preso`, e o dict da resposta nao pode
+    descarta-los: sem eles o badge "Failed"/"Stalled" da tela nunca aparece."""
     from app.db.engine import engine
 
     uid = cliente_docs.get("/auth/me").json()["id"]
@@ -545,8 +545,8 @@ def voz_real(banco_limpo, monkeypatch):
 
 
 def test_a_voz_le_o_texto_que_a_busca_de_verdade_devolve(voz_real):
-    """A voz lia `content` e a busca devolve `snippet`: o agente recebia o
-    arquivo com texto vazio e dizia "nao esta nos documentos" sempre."""
+    """A busca devolve `snippet`: lendo `content`, a voz daria ao agente o
+    arquivo com texto vazio e ele diria "nao esta nos documentos" sempre."""
     cliente, uid = voz_real
     _trecho(uid, _documento(uid, "Politica comercial"), "O prazo de entrega e de 15 dias uteis.", eixo=1)
 
@@ -581,9 +581,9 @@ def test_a_voz_so_grava_trilha_na_thread_da_propria_pessoa(voz_real):
 
 
 def test_busca_semantica_da_biblioteca_pela_rota_acha_o_documento(banco_limpo, monkeypatch):
-    """Pela rota, contra o banco migrado; so o embedding e dublado. A lista de
-    ids ia como text[] e `uuid = text` derrubava a rota com 500 sempre que
-    alguma coisa casava."""
+    """Pela rota, contra o banco migrado; so o embedding e dublado. Com a lista
+    de ids como text[], `uuid = text` derrubaria a rota com 500 sempre que
+    alguma coisa casasse."""
     from fastapi.testclient import TestClient
     from agent_ops import metering
 

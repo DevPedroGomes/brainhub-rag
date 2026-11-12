@@ -1,8 +1,7 @@
 -- 001: Baseline do schema.
 --
--- Reproduz o estado que o banco de producao ja tinha quando o controle de
--- migrations foi introduzido (2026-07-25). Totalmente idempotente: em banco
--- existente e no-op; em banco novo cria tudo do zero.
+-- Totalmente idempotente: em banco existente e no-op; em banco novo cria tudo
+-- do zero.
 --
 -- ATENCAO: a dimensao do vetor aqui e a HISTORICA (1536, era OpenAI).
 -- A 002 corrige para 1024 (Voyage). Nao edite este arquivo — migration ja

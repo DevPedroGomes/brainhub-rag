@@ -1,10 +1,10 @@
 """O pipeline do chat de ponta a ponta, pela rota /chat, com dubles (tests/dubles_chat.py).
 
-O que se prende aqui e o COMPORTAMENTO que a auditoria de 2026-09-30 achou
-quebrado: a pergunta de seguimento buscava com o fragmento sozinho, o "CRAG"
-nunca reconsultava o acervo, a web entrava como documento e a pergunta privada
-ia para o Tavily, a divergencia rodava em serie antes do primeiro token, e o
-`done` nao dizia qual mensagem tinha sido gravada.
+O que se prende aqui e o COMPORTAMENTO do pipeline: a pergunta de seguimento
+busca com a pergunta autocontida, e nao com o fragmento sozinho; o "CRAG"
+reconsulta o acervo; a web entra como citacao web, e nao como documento, e a
+pergunta privada so vai para o Tavily com opt-in; a divergencia roda em
+paralelo, sem segurar o primeiro token; e o `done` diz qual mensagem foi gravada.
 """
 
 import pytest
@@ -558,7 +558,7 @@ def test_erro_antes_do_primeiro_token_devolve_a_cota_e_grava_a_trilha(chat):
 
 def test_erro_do_provider_nao_vaza_para_o_visitante(chat):
     """Uma mensagem de rate limit da Voyage, com link do dashboard de billing,
-    apareceu na tela do visitante no meio do stream."""
+    nao pode aparecer na tela do visitante no meio do stream."""
     cliente, cenario = chat
     cenario.tokens = [RuntimeError("429: upgrade at https://dash.voyageai.com/billing (plano free)")]
 

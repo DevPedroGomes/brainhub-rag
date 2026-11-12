@@ -170,7 +170,7 @@ def semeadura(monkeypatch):
 
 @pytest.mark.parametrize("argumentos", [(), ("--senha", "curta-demais"), ("--senha", "")])
 def test_sem_senha_explicita_e_longa_a_semeadura_nao_cria_a_conta(semeadura, argumentos):
-    """A senha padrao vivia no repo publico: era a senha da demo para qualquer um."""
+    """Uma senha padrao no repo publico seria a senha da demo para qualquer um."""
     rodar, criadas, _ = semeadura
 
     with pytest.raises(SystemExit) as saida:

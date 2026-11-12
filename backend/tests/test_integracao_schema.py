@@ -1,7 +1,7 @@
 """Instalacao limpa: um banco criado SO pelas migrations tem que servir a app.
 
-Producao nasceu de um `init.sql` que nao existe mais; se as migrations nao
-bastarem, register/login/me e a lista de threads quebram com UndefinedColumn.
+Se as migrations nao bastarem, register/login/me e a lista de threads quebram
+com UndefinedColumn.
 
 Redis: com `TEST_REDIS_URL` o limiter usa Redis real (o conftest exporta
 `REDIS_URL` antes do import). Sem ela, o limiter e desligado no teste — nenhuma
@@ -186,8 +186,8 @@ def test_save_message_sobe_a_thread_na_ordenacao(cliente):
 
 
 def test_aviso_do_banco_numa_migration_chega_ao_log_de_boot(banco_limpo, tmp_path, monkeypatch, caplog):
-    """RAISE WARNING de migration (a 008 sem `unaccent`, por exemplo) chegava
-    so ao logger INFO do dialeto, que o app nao exibe."""
+    """RAISE WARNING de migration (a 008 sem `unaccent`, por exemplo) chega ao
+    logger INFO do dialeto, que o app nao exibe; o boot tem de repassa-lo."""
     import logging
     import shutil
 

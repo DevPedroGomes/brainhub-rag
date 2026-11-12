@@ -111,7 +111,7 @@ cat <<'TXT'
   volta vazia — voce nao consegue distinguir "o RAG nao achou" de
   "o pipeline quebrou".
 
-  O que observar, na ordem dos quatro consertos:
+  O que observar, nesta ordem:
     1. A SUA fala aparece no painel?        -> transcricao da entrada ligada
     2. Ele diz "let me check" antes?        -> frase de preenchimento
     3. O silencio apos a frase e curto?     -> disparo antecipado da busca

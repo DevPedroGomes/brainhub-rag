@@ -10,10 +10,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Roda ANTES do build e trava o deploy. A suite prende regressoes que ja
-  # estiveram em producao (limiar de relevancia contra a escala errada, snippet
-  # truncado antes do gerador, uma requisicao de embedding por variante de
-  # query). Nao toca a rede: sem chave de API, sem custo, alguns segundos.
+  # Roda ANTES do build e trava o deploy. A suite prende regressoes (limiar de
+  # relevancia contra a escala errada, snippet truncado antes do gerador, uma
+  # requisicao de embedding por variante de query). Nao toca a rede: sem chave
+  # de API, sem custo, alguns segundos.
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -136,12 +136,10 @@ jobs:
           pathlib.Path(".env").touch()
           EOF
       # `push` sem argumento empurra TODO servico que tem `build:` — e ignora os
-      # que nao tem (o `redis`, que vem do Docker Hub). A lista na mao omitia o
-      # `worker`; hoje ele escapa por acidente, porque declara a MESMA tag do
-      # `backend` e o push do backend publica a imagem dos dois. No dia em que o
-      # worker ganhar imagem propria (outro Dockerfile, outro contexto), a lista
-      # o deixaria de fora em silencio e a VPS puxaria uma `:latest` velha.
-      # Sem lista, nao ha o que esquecer de atualizar.
+      # que nao tem (o `redis`, que vem do Docker Hub). Uma lista na mao que
+      # esquecesse um servico com imagem propria o deixaria de fora em silencio,
+      # e a VPS puxaria uma `:latest` velha. Sem lista, nao ha o que esquecer de
+      # atualizar.
       - name: Build + push (todo servico com `build:`)
         run: |
           docker compose build

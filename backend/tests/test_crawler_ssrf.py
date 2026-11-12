@@ -1,8 +1,7 @@
-"""Defesa SSRF do crawler: 264 linhas que nao tinham nenhum teste.
+"""Defesa SSRF do crawler.
 
 Estes EXECUTAM o crawler contra servidores de verdade em 127.0.0.1, em vez de
-assertar sobre o texto-fonte. O de rebinding falhava antes do IP pinado: o
-conteudo interno vazava.
+assertar sobre o texto-fonte.
 """
 
 import socket
@@ -54,7 +53,7 @@ class _Interno(BaseHTTPRequestHandler):
 
 
 class _Gigante(BaseHTTPRequestHandler):
-    """Anuncia pouco e manda muito — o caso que enchia a RAM."""
+    """Anuncia pouco e manda muito — o caso que encheria a RAM."""
 
     def do_GET(self):
         self.send_response(200)
@@ -121,7 +120,7 @@ def test_url_legitima_continua_sendo_buscada(monkeypatch, sem_checagem_de_ip):
 
 
 def test_dns_rebinding_nao_alcanca_o_alvo_interno(monkeypatch):
-    """A prova que falhava antes do IP pinado.
+    """A prova do IP pinado.
 
     Um DNS hostil com TTL 0 responde publico na 1a resolucao (que a validacao
     ve) e interno na 2a (que a conexao usaria). Com o IP pinado ha UMA
@@ -144,10 +143,10 @@ def test_dns_rebinding_nao_alcanca_o_alvo_interno(monkeypatch):
 
 
 def test_corpo_gigante_e_cortado_durante_o_download(monkeypatch, sem_checagem_de_ip):
-    """O teto era conferido DEPOIS de baixar tudo.
+    """O teto e conferido durante o download, e nao DEPOIS de baixar tudo.
 
-    Um servidor hostil anunciando pouco e mandando muito enchia a memoria antes
-    de a checagem acontecer.
+    Um servidor hostil anunciando pouco e mandando muito encheria a memoria antes
+    de uma checagem no fim acontecer.
     """
     srv, porta = _servidor(_Gigante)
     fake, _ = _dns("gig.example", ["127.0.0.1"])

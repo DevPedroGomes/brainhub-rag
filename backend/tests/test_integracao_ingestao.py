@@ -1,6 +1,6 @@
 """A ingestao gravando num banco de verdade: o que acontece com `meta`.
 
-A falha sobrescrevia `meta` inteiro com `{"error": ...}` e apagava o
+A falha nao pode sobrescrever `meta` inteiro com `{"error": ...}` e apagar o
 `source_url` do documento vindo de URL; e o sucesso depois de uma falha tem de
 apagar SO o erro. Providers e disco sao dubles; o SQL e o real.
 """

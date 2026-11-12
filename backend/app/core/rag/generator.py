@@ -27,8 +27,8 @@ _SYSTEM_PROMPT = (
     "Respond in the same language as the user's question."
 )
 
-# Sem este aviso os trechos abaixo do limiar chegavam ao modelo como se
-# respondessem, e ele os esticava para caber na pergunta.
+# Sem este aviso os trechos abaixo do limiar chegariam ao modelo como se
+# respondessem, e ele os esticaria para caber na pergunta.
 _BAIXA_CONFIANCA = (
     "\n\nLOW CONFIDENCE: the search found no excerpt that clearly matches this question, "
     "so the excerpts below may not answer it. Use them only where they actually answer "

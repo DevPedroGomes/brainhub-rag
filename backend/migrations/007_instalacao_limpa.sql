@@ -1,13 +1,13 @@
 -- 007: fecha a distancia entre o schema das migrations e o que o codigo usa.
 --
--- MOTIVACAO: producao nasceu de um `init.sql` que ja tinha `users.is_active` e
--- `threads.updated_at`; as migrations 001-006 nunca criaram essas colunas. Num
--- banco criado so por migrations, register/login/me e a lista de threads
--- quebravam com UndefinedColumn. Tudo aqui e idempotente: em producao vira
+-- MOTIVACAO: o codigo usa `users.is_active` e `threads.updated_at`, e as
+-- migrations 001-006 nao criam essas colunas. Num banco criado so por
+-- migrations, register/login/me e a lista de threads quebrariam com
+-- UndefinedColumn. Tudo aqui e idempotente: em banco que ja tem as colunas vira
 -- no-op, em banco novo completa o schema.
 
--- Producao ja tem a coluna, nullable (veio do init.sql): o ADD abaixo e no-op
--- la, entao o backfill e o NOT NULL vem em passos separados. `require_user`
+-- Banco anterior as migrations pode ja ter a coluna, nullable: o ADD abaixo e
+-- no-op la, entao o backfill e o NOT NULL vem em passos separados. `require_user`
 -- trata NULL como inativo, por isso nenhum NULL pode sobrar.
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
@@ -53,6 +53,6 @@ CREATE INDEX IF NOT EXISTS idx_documents_user_effective_date
 ALTER TABLE decisions
     ADD COLUMN IF NOT EXISTS queries JSONB NOT NULL DEFAULT '[]'::jsonb;
 
--- Cache semantico nunca foi implementado (ver settings.py); a tabela so ocupava
--- espaco e carregava um indice vetorial.
+-- Cache semantico nao e implementado; a tabela so ocupa espaco e carrega um
+-- indice vetorial.
 DROP TABLE IF EXISTS semantic_cache;

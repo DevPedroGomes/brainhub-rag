@@ -1,7 +1,7 @@
 """Ingestao de um documento: ler → chunk → enriquecer → embedar → gravar.
 
-Movida de `api/routes/documents.py`. O caminho mais caro do app: o
-enriquecimento contextual chama o LLM uma vez por chunk.
+O caminho mais caro do app: o enriquecimento contextual chama o LLM uma vez
+por chunk.
 
 CONTRATO DE FALHA: esta funcao grava `documents.status = 'failed'` com uma
 mensagem saneada em `meta.error` e RE-LANCA. Ela nao decide estado terminal de
@@ -98,8 +98,8 @@ def _marcar_concluido(doc_id: str, total: int, summary: str | None) -> None:
 
 
 def _marcar_falha(doc_id: str, mensagem: str) -> None:
-    # MERGE em `meta`, e nao troca: sobrescrever apagava o `source_url` de um
-    # documento vindo de URL, e a origem dele sumia na primeira falha.
+    # MERGE em `meta`, e nao troca: sobrescrever apagaria o `source_url` de um
+    # documento vindo de URL, e a origem dele sumiria na primeira falha.
     with engine.begin() as conn:
         conn.execute(
             sqltext(
@@ -135,8 +135,8 @@ async def _resumo(texto: str, o_que: str) -> str | None:
 async def _itens_de_texto(brutos: list[tuple[str, dict]], texto_completo: str, titulo: str) -> list[dict]:
     """Chunks de texto com o contexto do enriquecimento, em todo fluxo de texto.
 
-    Antes so o PDF era enriquecido; pagina da web e transcricao entravam crus,
-    com a recuperacao pior justamente onde o texto e mais solto.
+    Sem enriquecimento, pagina da web e transcricao entrariam cruas, com a
+    recuperacao pior justamente onde o texto e mais solto.
     """
     if not brutos:
         return []
@@ -151,8 +151,8 @@ def _itens_visuais(data: bytes, paginas: list, primeiro_indice: int, dpi: int) -
     """Paginas escaneadas: render, descricao e embedding, uma pagina por vez.
 
     Roda inteiro numa thread. As imagens sao embedadas em lotes de
-    `_LOTE_VISUAL` e soltas em seguida: antes todas as paginas viravam imagem
-    ao mesmo tempo e so eram embedadas no fim, com todas em memoria.
+    `_LOTE_VISUAL` e soltas em seguida, em vez de ficarem todas em memoria ate
+    o fim.
     """
     from app.core.ingestion.pdf_processor import renderizar_paginas
 
@@ -204,8 +204,8 @@ async def _itens_do_pdf(data: bytes, titulo: str) -> tuple[list[dict], str | Non
         raise FalhaPermanente("The PDF has no pages.")
 
     # Pagina com texto suficiente vai pelo caminho textual, que e barato; a
-    # curta vai SO pelo visual, levando o texto dela junto. Antes ela entrava
-    # pelos dois e virava dois chunks da mesma pagina.
+    # curta vai SO pelo visual, levando o texto dela junto. Pelos dois ela
+    # viraria dois chunks da mesma pagina.
     textuais = [p.texto if not p.escaneada else "" for p in paginas]
     texto_completo = "\n\n".join(p.texto for p in paginas if p.texto)
     brutos = await asyncio.to_thread(chunk_document_pages, textuais)
@@ -341,6 +341,6 @@ async def process_ingestion(doc_id: str, user_id: str, storage_path: str):
             logger.exception("ingestao.marcar_falha_falhou doc_id=%s", doc_id)
         # Re-lanca de proposito: quem decide se isto e uma retentativa ou o fim
         # da linha e o envelope em `jobs/worker.py`, nao esta funcao. Engolir
-        # aqui fazia o job terminar gravando `concluido` em `job_progress` para
+        # aqui faria o job terminar gravando `concluido` em `job_progress` para
         # um documento marcado como `failed`.
         raise

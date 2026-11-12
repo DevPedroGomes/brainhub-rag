@@ -40,7 +40,6 @@ services:
       # os dois podem apontar para instancias diferentes. O metering FALHA
       # FECHADO — sem esta variavel o pacote tenta `redis://localhost:6379`,
       # nao acha ninguem dentro do container, e RECUSA toda chamada com 503.
-      # Foi exatamente isso que derrubou a demo depois do deploy da Parte A.
       - AGENT_OPS_REDIS_URL=redis://redis:6379
       - AGENT_OPS_PROJETO=brainhub
       # Teto de profundidade da fila; acima dele a API recusa com 429 em vez de
@@ -129,11 +128,6 @@ services:
     healthcheck:
       # O proprio health check do arq: le no Redis a chave que o worker renova a
       # cada `health_check_interval` e sai != 0 se ela estiver velha ou ausente.
-      # O que estava aqui antes NUNCA reprovava: `CMD-SHELL` roda
-      # `/bin/sh -c "pgrep -f 'arq app.jobs.worker' ..."`, e a linha de comando
-      # desse proprio shell contem o padrao, entao o `pgrep -f` casava com ele
-      # mesmo — worker morto ou travado seguia "healthy". (E `pgrep` nem existe
-      # na imagem: vem do `procps`, que o Dockerfile nao instala.)
       test: ["CMD", "arq", "app.jobs.worker.WorkerSettings", "--check"]
       interval: 30s
       timeout: 10s
@@ -158,8 +152,8 @@ services:
       # URL publica, repassando o IP do visitante (o `X-Real-Ip` do Traefik) no
       # X-Forwarded-For. Usa o nome do container (unico no host) e nao o alias
       # `backend`: o frontend tambem esta na rede externa `proxy`, onde o alias
-      # de outra stack poderia colidir. Pela URL publica todo visitante chegava ao rate limit
-      # com o IP deste container e dividia um balde so com todos os outros.
+      # de outra stack poderia colidir. Pela URL publica todo visitante chegaria ao rate limit
+      # com o IP deste container e dividiria um balde so com todos os outros.
       - API_INTERNAL_URL=http://group-documents-api:8000
     depends_on:
       backend:

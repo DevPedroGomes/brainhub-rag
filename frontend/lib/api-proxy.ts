@@ -1,15 +1,14 @@
 /**
- * Proxy das rotas /api/* do Next para o backend.
+ * Proxy das rotas /api/* do Next para o backend. Tres cuidados:
  *
- * Tres coisas que as rotas faziam cada uma do seu jeito, e erravam:
- * 1. Chamavam a URL PUBLICA do backend. Pela internet, todo visitante chegava
- *    ao rate limit com o IP deste container, entao dividiam um balde so. Agora
- *    o destino e a rede interna (`API_INTERNAL_URL`) e o IP do visitante vai no
+ * 1. O destino e a rede interna (`API_INTERNAL_URL`), nao a URL PUBLICA do
+ *    backend: pela internet, todo visitante chegaria ao rate limit com o IP
+ *    deste container, e todos dividiriam um balde so. O IP do visitante vai no
  *    `X-Forwarded-For`, lido do `x-real-ip` que o Traefik grava.
- * 2. Nao tinham timeout: backend pendurado segurava o request para sempre.
- * 3. Liam `response.json()` sem guarda e rotulavam tudo como SSE ou JSON; um
- *    502 do backend virava 500 opaco. Agora o corpo passa como stream, com o
- *    content-type do backend, e falha de rede vira 502/504 com `detail`.
+ * 2. Timeout: backend pendurado seguraria o request para sempre.
+ * 3. O corpo passa como stream, com o content-type do backend, e falha de rede
+ *    vira 502/504 com `detail`. Ler `response.json()` sem guarda e rotular tudo
+ *    como SSE ou JSON transformaria um 502 do backend em 500 opaco.
  */
 
 import { isIP } from 'node:net'
@@ -83,7 +82,7 @@ export async function proxyToBackend(
   if (method === 'POST' || method === 'PUT') {
     if (streamBody) {
       // O backend conta o corpo ENQUANTO le e recusa com 413 no teto. Com o
-      // corpo bufferizado aqui, o arquivo inteiro passava pela memoria deste
+      // corpo bufferizado aqui, o arquivo inteiro passaria pela memoria deste
       // container antes de o backend poder dizer nao.
       const tipo = req.headers.get('content-type')
       const tamanho = req.headers.get('content-length')

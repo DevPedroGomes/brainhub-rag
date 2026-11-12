@@ -1,9 +1,8 @@
 """Prende a ingestao fora do modulo de rotas.
 
-Por que: enquanto `process_ingestion` morava em `api/routes/documents.py`, era
-natural chama-la direto do handler. Com ela em `app/jobs/`, a chamada de dentro
-do processo web fica visivelmente errada — que e o ponto, porque a proxima task
-troca essa chamada por enfileiramento.
+Por que: com `process_ingestion` em `app/jobs/`, e nao em
+`api/routes/documents.py`, a chamada de dentro do processo web fica visivelmente
+errada — que e o ponto, porque a rota enfileira em vez de chamar.
 """
 
 import inspect

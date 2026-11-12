@@ -71,8 +71,8 @@ def _thread_com_mensagens(user_id: str, n: int) -> str:
 # ---------------------------------------------------------------------------
 
 def test_historico_devolve_as_mais_recentes_em_ordem_cronologica(banco_limpo):
-    """Com `ASC LIMIT` a conversa de 25 mensagens entregava m0..m19 e o modelo
-    nunca via os ultimos turnos."""
+    """Com `ASC LIMIT` a conversa de 25 mensagens entregaria m0..m19 e o modelo
+    nunca veria os ultimos turnos."""
     from app.api.routes.chat import get_thread_history
 
     u = _usuario()

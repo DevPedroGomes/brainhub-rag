@@ -100,7 +100,7 @@ def _erro_gravado(r) -> str | None:
 
 @pytest.mark.parametrize("mime", ["text/plain", "audio/mpeg"])
 def test_pagina_da_web_e_transcricao_passam_pelo_enriquecimento(ingestao_falsa, monkeypatch, mime):
-    """Antes so o PDF era enriquecido: web e audio entravam crus."""
+    """Web e audio passam pelo mesmo enriquecimento do PDF, e nao entram crus."""
     from app.core.ingestion import multimodal
 
     r = ingestao_falsa
@@ -132,8 +132,8 @@ def test_nenhuma_chamada_paga_da_ingestao_roda_no_event_loop(ingestao_falsa):
 # ---------------------------------------------------------------------------
 
 def test_pagina_curta_entra_uma_vez_so_com_o_texto_dela(ingestao_falsa):
-    """Pagina com 1 a 119 caracteres tinha texto E ia para o caminho visual:
-    virava dois chunks da mesma pagina."""
+    """Pagina com 1 a 119 caracteres tem texto E vai para o caminho visual:
+    nao pode virar dois chunks da mesma pagina."""
     r = ingestao_falsa
 
     _ingerir(r, "application/pdf", pdf_com_texto([LONGO, "Capitulo 1"]))
@@ -280,8 +280,8 @@ def sem_cache_de_tipos():
 
 def test_sdk_sem_alguma_excecao_nao_quebra_a_classificacao(monkeypatch, sem_cache_de_tipos):
     """SDK do Voyage mais velho, sem `VideoProcessingError` nem
-    `MalformedRequestError`: o getattr cru levantava AttributeError dentro do
-    `except` do worker, e o documento ficava em `processing` sem dead-letter."""
+    `MalformedRequestError`: o getattr cru levantaria AttributeError dentro do
+    `except` do worker, e o documento ficaria em `processing` sem dead-letter."""
     from voyageai import error as voyage
 
     monkeypatch.delattr(voyage, "VideoProcessingError")

@@ -4,12 +4,10 @@
  * A trilha de decisao: por que o agente respondeu aquilo.
  *
  * POR QUE ESTE COMPONENTE EXISTE
- * A tabela `decisions` guarda o caminho de cada resposta desde a migracao 003:
- * quais consultas foram buscadas, quais trechos entraram e com que score, o
- * que sobrou depois do grader, se o rerank rodou, se caiu na rede de baixa
- * confianca, se duas fontes divergiram, e quanto demorou. Tudo isso existia,
- * estava indexado, e NAO TINHA COMO SER VISTO: o frontend nao tinha rota proxy
- * para /decisions. Feature construida, testada e desligada.
+ * A tabela `decisions` guarda o caminho de cada resposta: quais consultas
+ * foram buscadas, quais trechos entraram e com que score, o que sobrou depois
+ * do grader, se o rerank rodou, se caiu na rede de baixa confianca, se duas
+ * fontes divergiram, e quanto demorou.
  *
  * E o que ela mostra e exatamente o que um chat de provedor nao mostra por
  * projeto: eles devolvem a resposta, nunca o caminho ate ela.
@@ -54,9 +52,9 @@ export function DecisionTrail({
     carregouRef.current = false
   }, [threadId])
 
-  // Carrega ao abrir, ao trocar de thread e a cada resposta nova. Antes so
-  // carregava ao abrir: com o painel aberto, a trilha da pergunta que acabou
-  // de ser respondida nao aparecia. Fechado e nunca aberto, nao busca nada.
+  // Carrega ao abrir, ao trocar de thread e a cada resposta nova: com o painel
+  // aberto, a trilha da pergunta que acabou de ser respondida tem que aparecer.
+  // Fechado e nunca aberto, nao busca nada.
   useEffect(() => {
     if (!threadId || (!aberto && !carregouRef.current)) return
     let cancelado = false
@@ -205,8 +203,7 @@ function UmaDecisao({ d }: { d: Decision }) {
               <Trecho key={i} p={p} mantido={mantido} />
             ))}
           </ul>
-          {/* A escala vem do backend porque o numero sozinho engana. Foi o bug
-              que fez toda resposta sair com aviso de baixa confianca. */}
+          {/* A escala vem do backend porque o numero sozinho engana. */}
           <p className="mt-1.5 text-[11px] text-neutral-400">
             <span className="font-mono uppercase">{d.score_scale}</span> · {d.score_scale_hint}
           </p>

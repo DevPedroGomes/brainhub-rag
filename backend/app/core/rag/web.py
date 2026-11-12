@@ -3,8 +3,7 @@
 Resultado web NAO e documento do acervo: volta marcado com `kind: "web"`,
 `document_id` nulo e a `url`, para virar citacao propria, entrar no prompt num
 bloco separado e rotulado como externo, e aparecer na trilha com a escala do
-Tavily. Antes entrava como "documento" de pagina 0, sumia das citacoes e o
-prompt mandava responder so dos documentos.
+Tavily.
 
 Quem decide SE a busca roda e a rota (desligada por padrao, nunca com `as_of`).
 """

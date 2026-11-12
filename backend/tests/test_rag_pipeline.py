@@ -1,11 +1,7 @@
-"""Testes que prendem os defeitos encontrados na auditoria de 2026-08-06.
+"""Testes que prendem a logica do pipeline de RAG.
 
-Todos aqui sao regressoes reais que estavam em PRODUCAO, nao casos hipoteticos.
-Nenhum toca a rede: o que cada um verifica e a logica que quebrou, e a logica
-quebrou em lugares onde uma chamada de API nao teria ajudado a perceber.
-
-O criterio para um teste entrar aqui: se ele tivesse existido, o bug nao teria
-chegado ao ar.
+Nenhum toca a rede: o que cada um verifica e a logica, em lugares onde uma
+chamada de API nao ajudaria a perceber uma quebra.
 """
 
 import inspect
@@ -23,10 +19,10 @@ BACKEND = Path(__file__).resolve().parents[1]
 # 1. O limiar de relevancia contra a escala do score
 #
 # `relevance_score` chega ao grader vindo de duas origens: relevancia calibrada
-# 0..1 quando o reranker da Cohere roda, e score de RRF quando nao roda. O
-# limiar era 0.7 absoluto aplicado aos dois. Com rrf_k=60 o maximo teorico de
-# um chunk e 2/(60+1) = 0,0328, entao 100% dos documentos eram descartados em
-# toda pergunta, sempre.
+# 0..1 quando o reranker da Cohere roda, e score de RRF quando nao roda. Um
+# limiar de 0.7 absoluto aplicado aos dois nao serve: com rrf_k=60 o maximo
+# teorico de um chunk e 2/(60+1) = 0,0328, entao 100% dos documentos seriam
+# descartados em toda pergunta, sempre.
 # ---------------------------------------------------------------------------
 
 def _doc(score: float, escala: str | None = None, ident: str = "c1") -> dict:
@@ -38,7 +34,7 @@ def _doc(score: float, escala: str | None = None, ident: str = "c1") -> dict:
 
 
 def test_score_de_rrf_nao_e_medido_contra_limiar_absoluto():
-    """O bug exato: RRF no maximo teorico ainda seria descartado por 0.7."""
+    """Com limiar absoluto, RRF no maximo teorico ainda seria descartado por 0.7."""
     maximo_teorico_rrf = 2 / 61  # 0,0328: rank 1 nas DUAS listas
     docs = [_doc(maximo_teorico_rrf, "rrf", "a"), _doc(0.016, "rrf", "b")]
 
@@ -51,7 +47,7 @@ def test_score_de_rrf_nao_e_medido_contra_limiar_absoluto():
 
 
 def test_rrf_saudavel_nao_e_baixa_confianca():
-    """O sinal ficava permanentemente ligado, pagando um rewrite por pergunta."""
+    """O sinal nao pode ficar permanentemente ligado, pagando um rewrite por pergunta."""
     docs = [_doc(0.03, "rrf", "a"), _doc(0.02, "rrf", "b")]
     _, baixa_confianca = grade_documents(docs)
     assert baixa_confianca is False
@@ -63,7 +59,7 @@ def test_rrf_com_um_trecho_so_e_baixa_confianca():
 
 
 def test_cohere_com_algum_acima_do_limiar_nao_e_baixa_confianca():
-    """O gatilho antigo ("menos da metade passou") disparava aqui, no caso normal:
+    """Um gatilho de "menos da metade passou" dispararia aqui, no caso normal:
     um trecho bom e quatro de enchimento."""
     docs = [_doc(0.9, "cohere", "a")] + [_doc(0.1, "cohere", f"x{i}") for i in range(4)]
     mantidos, baixa_confianca = grade_documents(docs)
@@ -101,10 +97,10 @@ def test_lote_vazio_e_baixa_confianca():
 # ---------------------------------------------------------------------------
 # 2. O texto que chega ao gerador
 #
-# `hybrid_search` devolvia left(COALESCE(enriched_content, content), 500) e esse
-# campo vai direto para o prompt. Chunks tem 500 TOKENS (~2000 chars), entao o
-# modelo recebia menos de um terco, cortado no meio de uma frase. Com
-# enriquecimento o prefixo gerado pela IA comia ~300 dos 500 caracteres.
+# O trecho que `hybrid_search` devolve vai direto para o prompt. Chunks tem 500
+# TOKENS (~2000 chars): cortado em 500 caracteres, o modelo receberia menos de
+# um terco, no meio de uma frase, e com o texto enriquecido o prefixo gerado
+# pela IA comeria ~300 dos 500 caracteres.
 # ---------------------------------------------------------------------------
 
 # Coberto com SQL real em tests/test_integracao_busca.py
@@ -114,10 +110,10 @@ def test_lote_vazio_e_baixa_confianca():
 # ---------------------------------------------------------------------------
 # 3. Uma requisicao de embedding por pergunta, nao uma por variante
 #
-# O retriever pedia o embedding de cada variante do multi-query numa chamada
-# separada: 4 requisicoes por pergunta contra o limite de 3/minuto do plano
-# Voyage sem meio de pagamento. Toda pergunta INEDITA falhava; repetida
-# funcionava, porque vinha do cache — o que fazia parecer intermitente.
+# Pedir o embedding de cada variante do multi-query numa chamada separada sao 4
+# requisicoes por pergunta, e o provider limita requisicoes por minuto. A
+# pergunta INEDITA falharia e a repetida funcionaria, porque viria do cache — o
+# que faz a falha parecer intermitente.
 # ---------------------------------------------------------------------------
 
 # Uma chamada de embedding com todas as consultas: prendido pela rota em
@@ -168,8 +164,8 @@ def test_cache_de_embedding_so_pede_o_que_falta(monkeypatch):
 # ---------------------------------------------------------------------------
 # 4. Isolamento por tenant
 #
-# Nao e regressao: e a propriedade que o case study afirma publicamente e que
-# nao pode ser quebrada sem alguem perceber.
+# Nao e regressao: e uma propriedade que nao pode ser quebrada sem alguem
+# perceber.
 # ---------------------------------------------------------------------------
 
 # As duas pernas filtrando por dono: tests/test_integracao_busca.py
@@ -177,8 +173,6 @@ def test_cache_de_embedding_so_pede_o_que_falta(monkeypatch):
 
 
 def test_retrieve_documents_exige_user_id():
-    """Foi a ausencia deste parametro que deixava o corretive_flow (removido)
-    quebrado sem ninguem notar."""
     from app.core.rag.retriever import retrieve_documents
 
     parametro = inspect.signature(retrieve_documents).parameters["user_id"]
@@ -237,9 +231,9 @@ def test_primeiro_chunk_roda_sozinho_para_aquecer_o_cache(monkeypatch):
 
 
 def test_documento_longo_da_a_cada_chunk_um_contexto_que_o_contem(monkeypatch):
-    """O contexto era o documento cortado nos primeiros 50k caracteres: o chunk
-    do fim recebia um contexto que nao o continha. Agora cada chunk vai com a
-    janela ao redor dele, e os chunks da mesma janela dividem o bloco (e o
+    """Com o documento cortado nos primeiros 50k caracteres, o chunk do fim
+    receberia um contexto que nao o contem. Cada chunk vai com a janela ao
+    redor dele, e os chunks da mesma janela dividem o bloco (e o
     cache); o primeiro de cada janela roda antes dos outros dela."""
     chunker, chamadas = _enriquecimento_espionado(monkeypatch)
     secoes = [f"Secao {i} marcador{i:03d}. " + "texto corrido de enchimento " * 60 for i in range(120)]
@@ -326,10 +320,8 @@ def test_uvicorn_confia_no_proxy_para_enxergar_o_ip_real():
 # ---------------------------------------------------------------------------
 # 7. Multimodal: o que e embedado, e o que e so texto de apoio
 #
-# Antes, imagem virava legenda escrita por um LLM e SO a legenda era indexada:
-# tudo que a legenda nao mencionava deixava de existir para a busca. E o
-# caminho estava morto duas vezes — pacote `google-generativeai` descontinuado
-# pelo Google e id de modelo (`gemini-2.5-flash-preview-04-17`) ja retirado.
+# Se imagem virasse legenda escrita por um LLM e SO a legenda fosse indexada,
+# tudo que a legenda nao mencionasse deixaria de existir para a busca.
 # ---------------------------------------------------------------------------
 
 def test_texto_e_imagem_compartilham_o_mesmo_espaco_vetorial(monkeypatch):
@@ -378,10 +370,9 @@ def test_gemini_saiu_por_completo():
 
 def test_imagem_entra_no_indice_mesmo_sem_descricao():
     """O vetor vem da imagem. Falha ao descrever custa recall no BM25, nao o
-    documento inteiro — antes, sem legenda nao havia documento nenhum.
+    documento inteiro.
 
-    `process_ingestion` mora em `app/jobs/ingestao.py` desde a Fase 2 Task 5;
-    o teste segue o codigo."""
+    `process_ingestion` mora em `app/jobs/ingestao.py`; o teste segue o codigo."""
     fonte = (BACKEND / "app/jobs/ingestao.py").read_text()
     assert '"sequencia": ([descricao, imagem] if descricao else [imagem])' in fonte
 
@@ -427,9 +418,9 @@ def test_audio_usa_deepgram_porque_voyage_nao_cobre_audio():
 # 8. Traducao de bloco de imagem entre os dois formatos de provider
 #
 # Os call sites escrevem no formato Anthropic. Producao roda no OpenRouter, que
-# fala OpenAI-compat, onde imagem tem OUTRA forma. Sem traduzir, o bloco era
-# descartado em silencio: o modelo recebia so o texto "descreva esta imagem",
-# sem imagem, e devolvia a descricao de uma imagem inventada — plausivel,
+# fala OpenAI-compat, onde imagem tem OUTRA forma. Sem traduzir, o bloco seria
+# descartado em silencio: o modelo receberia so o texto "descreva esta imagem",
+# sem imagem, e devolveria a descricao de uma imagem inventada — plausivel,
 # errada, e indo direto para o indice.
 # ---------------------------------------------------------------------------
 
@@ -484,9 +475,9 @@ def test_sentenca_sem_pontuacao_nao_vira_chunk_ilimitado():
     """Uma pagina de tabela ou de contrato em caixa alta e UMA sentenca.
 
     O laco so fecha um chunk quando ja ha algo acumulado; com a lista vazia a
-    condicao e falsa e a sentenca entrava inteira, de qualquer tamanho. O chunk
-    estourava o limite do embedding, e o trecho que chegava ao gerador era a
-    pagina toda.
+    condicao e falsa e, sem teto, a sentenca entraria inteira, de qualquer
+    tamanho. O chunk estouraria o limite do embedding, e o trecho que chega ao
+    gerador seria a pagina toda.
     """
     from app.core.ingestion.chunker import _token_count, chunk_text
 
@@ -726,7 +717,7 @@ def test_condensacao_limpa_rotulo_numeracao_e_repeticao(monkeypatch):
 ])
 def test_preambulo_e_rotulo_do_modelo_nao_viram_consulta(monkeypatch, resposta):
     """Com historico a primeira linha manda na busca inteira (embedding,
-    palavra-chave, rerank, reescrita): preambulo ali estragava tudo."""
+    palavra-chave, rerank, reescrita): preambulo ali estraga tudo."""
     retriever, _ = _multi_query_falso(monkeypatch, resposta)
 
     consultas = retriever.generate_multi_queries("e em 2025?", [{"role": "user", "content": "qual o prazo?"}])

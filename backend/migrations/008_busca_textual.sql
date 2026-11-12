@@ -2,9 +2,9 @@
 -- a extensao existir) e ingles, e a consulta (vector_store.py) casa QUALQUER
 -- termo em vez de todos.
 --
--- MOTIVACAO: o trigger da 001 indexava com 'english' e a consulta fazia AND de
--- todos os termos. "qual", "o", "de", "para" viravam termos obrigatorios e
--- pergunta em portugues quase nunca casava nada; a busca "hibrida" era na
+-- MOTIVACAO: com o trigger da 001 indexando com 'english' e a consulta fazendo
+-- AND de todos os termos, "qual", "o", "de", "para" viram termos obrigatorios e
+-- pergunta em portugues quase nunca casa nada; a busca "hibrida" fica na
 -- pratica so vetorial. Numeros, e o que eles NAO mostram, no comentario de
 -- TEXT_SEARCH_CONFIGS em vector_store.py (scripts/avaliar_busca_textual.py).
 

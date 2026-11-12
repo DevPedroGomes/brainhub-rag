@@ -44,8 +44,8 @@ export function useChatStream(options: UseChatStreamOptions) {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // As opcoes vivem num ref para `sendMessage` e `loadThread` serem estaveis:
-  // recria-los a cada render (ou a cada token) disparava os efeitos de quem os
-  // recebe, e o historico era buscado de novo a cada token.
+  // recria-los a cada render (ou a cada token) dispararia os efeitos de quem os
+  // recebe, e o historico seria buscado de novo a cada token.
   const opcoesRef = useRef(options)
   useEffect(() => {
     opcoesRef.current = options

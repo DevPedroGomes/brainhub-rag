@@ -9,15 +9,15 @@ import KnowledgeHub from '@/components/KnowledgeHub'
 import GuestBanner from '@/components/GuestBanner'
 import { isGuest } from '@/lib/auth'
 
-// A biblioteca era renderizada dentro da landing, em `/`, depois de checar a
-// sessao no navegador: o HTML de `/` saia vazio para todo mundo. Agora `/` e
-// estatica e a area logada tem rota propria.
+// A area logada tem rota propria e `/` fica estatica: com a biblioteca
+// renderizada dentro da landing, depois de checar a sessao no navegador, o
+// HTML de `/` sairia vazio para todo mundo.
 export default function LibraryPage() {
   const router = useRouter()
   const { user, loading, logout, getToken } = useAuth()
 
   // Estavel: o KnowledgeHub busca a lista num efeito que depende dela, e uma
-  // funcao nova a cada render buscava a lista de novo a cada render.
+  // funcao nova a cada render buscaria a lista de novo a cada render.
   const getTokenAsync = useCallback(async () => getToken() ?? undefined, [getToken])
 
   useEffect(() => {

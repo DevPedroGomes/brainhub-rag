@@ -505,7 +505,7 @@ export default function KnowledgeHub({ getToken }: KnowledgeHubProps) {
       </AnimatePresence>
 
       {/* Ocupa o que sobra abaixo do topo (e da faixa do convidado, quando ha):
-          uma altura fixa de 100dvh menos o topo cortava o fim da lista. */}
+          uma altura fixa de 100dvh menos o topo cortaria o fim da lista. */}
       <div className="flex flex-col flex-1 min-h-0 p-6 lg:p-10 max-w-7xl w-full mx-auto">
         {/* ─── Header ──────────────────────────────────────────────── */}
         <div className="mb-7">
@@ -546,8 +546,7 @@ export default function KnowledgeHub({ getToken }: KnowledgeHubProps) {
                 </Button>
               </motion.div>
             ) : (
-              // Sem selecao o chat pergunta ao acervo inteiro; antes o unico
-              // caminho ate ele exigia selecionar documentos.
+              // Sem selecao o chat pergunta ao acervo inteiro.
               docs.some(d => d.status === 'completed') && (
                 <Button variant="outline" onClick={goToChat} className="hidden sm:inline-flex gap-2 shrink-0">
                   <MessageSquare className="h-4 w-4" />
@@ -727,7 +726,7 @@ export default function KnowledgeHub({ getToken }: KnowledgeHubProps) {
         {/* Floating Action Button (mobile) */}
         {(selectedCount > 0 || docs.some(d => d.status === 'completed')) && (
           // Centralizado por flex, e nao por -translate-x-1/2: o `animate` do
-          // framer-motion escreve o transform inline e apagava a translacao.
+          // framer-motion escreve o transform inline e apagaria a translacao.
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -800,7 +799,6 @@ function DocumentCard({
           </Badge>
         )
       case 'failed':
-        // A causa ja era gravada em meta->>'error' e nunca chegava aqui.
         return (
           <Badge variant="destructive" className="gap-1" title={doc.erro ?? undefined}>
             <AlertCircle className="h-3 w-3" />
@@ -974,7 +972,7 @@ function EmptyState({
               <Upload className="h-4 w-4" />
               Upload first document
             </Button>
-            {/* Sem nenhum arquivo a mao o visitante batia numa tela morta.
+            {/* Sem nenhum arquivo a mao o visitante bateria numa tela morta.
                 O exemplo e um handbook de suporte ficticio, com um FAQ em
                 portugues, que ja da o que perguntar no chat. */}
             <Button

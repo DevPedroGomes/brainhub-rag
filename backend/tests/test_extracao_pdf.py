@@ -1,8 +1,5 @@
 """A extracao de PDF, EXECUTADA.
 
-Ate aqui `extrair_paginas` e `chunk_text` nunca rodavam em teste nenhum: a
-suite asseverava o texto-fonte. Nao existia um unico fixture de PDF no repo.
-
 Os PDFs sao gerados em memoria (tests/fixtures) em vez de versionados: um
 binario no repo nao diz o que testa e ninguem revisa o diff dele.
 """
@@ -57,8 +54,8 @@ def test_pdf_escaneado_vai_para_o_caminho_visual():
 
 
 def test_render_das_escaneadas_e_uma_pagina_por_vez(monkeypatch):
-    """Antes todas as escaneadas viravam imagem juntas, antes de qualquer uma
-    ser processada: 300 paginas a 150 DPI sao ~1,9 GB de RAM no worker."""
+    """Se todas as escaneadas virassem imagem juntas, antes de qualquer uma
+    ser processada, 300 paginas a 150 DPI seriam ~1,9 GB de RAM no worker."""
     import pymupdf
 
     renderizadas: list[int] = []
@@ -79,8 +76,8 @@ def test_render_das_escaneadas_e_uma_pagina_por_vez(monkeypatch):
 
 
 def test_pdf_acima_do_teto_de_paginas_falha_como_permanente(monkeypatch):
-    """Sem teto, um PDF de milhares de paginas estourava o job de 30 minutos,
-    virava `failed`, retentava do zero e queimava o custo de novo."""
+    """Sem teto, um PDF de milhares de paginas estouraria o job de 30 minutos,
+    viraria `failed`, retentaria do zero e queimaria o custo de novo."""
     from app.config.settings import get_settings
 
     monkeypatch.setattr(get_settings(), "max_pdf_pages", 2)
@@ -111,11 +108,11 @@ def test_pdf_corrompido_falha_de_forma_limpa():
 
 
 def test_pagina_sem_pontuacao_nao_vira_chunk_ilimitado():
-    """O bug que so aparece com um PDF de verdade na mao.
+    """O caso que so aparece com um PDF de verdade na mao.
 
     Uma pagina de tabela ou de contrato em caixa alta e UMA sentenca: o laco de
-    chunk_text so fecha um chunk quando ja ha algo acumulado, entao ela entrava
-    inteira. Agora ha teto duro.
+    chunk_text so fecha um chunk quando ja ha algo acumulado, entao sem teto duro
+    ela entraria inteira.
     """
     paginas = extrair_paginas(pdf_sem_pontuacao(3000))
     assert len(paginas) == 1
@@ -133,8 +130,8 @@ def test_o_texto_extraido_perde_o_whitespace_redundante():
 
 
 def test_a_extracao_preserva_a_quebra_de_linha_de_uma_tabela():
-    """Colapsar todo whitespace juntava as linhas da tabela numa so, e cada
-    valor perdia o rotulo da propria linha."""
+    """Colapsar todo whitespace juntaria as linhas da tabela numa so, e cada
+    valor perderia o rotulo da propria linha."""
     tabela = "Plano Basico    10 GB    R$ 50\nPlano Pro    50 GB    R$ 120\nPlano Max    200 GB    R$ 300"
 
     (pagina,) = extrair_paginas(pdf_com_texto([tabela]))
@@ -146,7 +143,7 @@ def test_a_extracao_preserva_a_quebra_de_linha_de_uma_tabela():
 
 def test_tabela_grande_demais_e_partida_por_linha_e_mantem_as_linhas():
     """Tabela sem pontuacao e UMA sentenca; partida por palavra, as linhas se
-    misturavam. Partida por linha, cada pedaco fica abaixo do teto e cada linha
+    misturariam. Partida por linha, cada pedaco fica abaixo do teto e cada linha
     inteira."""
     linhas = [f"Item {i} codigo {i * 7} quantidade {i % 13} valor {i * 3} reais" for i in range(300)]
 
@@ -170,9 +167,7 @@ def test_numeracao_de_pagina_e_1_based_e_contigua(n):
 
 
 def test_pagina_curta_com_texto_e_tratada_como_escaneada():
-    """Descoberto ao escrever estas fixtures, e custa dinheiro.
-
-    O criterio de "pagina escaneada" e ter MENOS de
+    """O criterio de "pagina escaneada" e ter MENOS de
     `pdf_min_chars_por_pagina` (120) caracteres — nao e a ausencia de texto.
     Entao uma pagina de rosto, uma pagina so com titulo ou uma pagina final com
     "Obrigado" e renderizada e mandada para o modelo de VISAO, que e uma

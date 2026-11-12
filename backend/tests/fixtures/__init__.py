@@ -42,7 +42,7 @@ def pdf_escaneado(n_paginas: int = 1) -> bytes:
 def pdf_sem_pontuacao(palavras: int = 3000) -> bytes:
     """Uma pagina que e UMA sentenca — tabela, balanco, contrato em caixa alta.
 
-    Era o caso que virava um chunk de tamanho ilimitado antes do teto.
+    E o caso que, sem teto, viraria um chunk de tamanho ilimitado.
     """
     return pdf_com_texto([" ".join(["PALAVRA"] * palavras)])
 

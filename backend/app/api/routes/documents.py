@@ -207,8 +207,8 @@ async def _recusar_e_desfazer(doc_id, storage_path: str, exc: Exception) -> None
 
     A ordem das rotas e: consome a cota -> grava o arquivo -> cria a linha
     `pending` -> enfileira. Se o enfileiramento recusa, os TRES primeiros ja
-    aconteceram, e nada os desfazia: a cota do dia era gasta por um trabalho que
-    nunca rodou, o arquivo ficava orfao no volume, e a linha ficava `pending`
+    aconteceram, e sem desfaze-los a cota do dia seria gasta por um trabalho que
+    nunca rodou, o arquivo ficaria orfao no volume, e a linha ficaria `pending`
     para sempre — com o frontend consultando aquele documento a cada 3s, para
     sempre.
 
@@ -255,7 +255,7 @@ async def _contado(fluxo: AsyncIterator[bytes], teto: int, limite: int) -> Async
 
     O parser do multipart grava o arquivo num temporario enquanto le; sem este
     contador, um upload sem Content-Length (chunked), ou com um Content-Length
-    que mente, ia inteiro para o disco antes de qualquer checagem de tamanho.
+    que mente, iria inteiro para o disco antes de qualquer checagem de tamanho.
     """
     lidos = 0
     async for bloco in fluxo:
@@ -285,9 +285,9 @@ async def _ler_formulario(request: Request, limite: int) -> FormData:
 async def _ler_ate_o_limite(arquivo: UploadFile, limite: int) -> bytes:
     """Le em blocos e desiste em `limite + 1` bytes, com 413.
 
-    `await file.read()` trazia o arquivo inteiro para a memoria antes de olhar o
+    `await file.read()` traria o arquivo inteiro para a memoria antes de olhar o
     tamanho, entao um upload sem Content-Length (ou com folga dentro dele)
-    ocupava a RAM que o limite existia para proteger.
+    ocuparia a RAM que o limite existe para proteger.
     """
     partes: list[bytes] = []
     lidos = 0
@@ -496,8 +496,8 @@ def _documentos_parecidos(qvec: list[float], user_id: str) -> list[str]:
 
 def _listar_documentos(user_id: str, relevant_ids: list[str] | None):
     with engine.begin() as conn:
-        # `erro` vinha sendo gravado em meta->>'error' e nunca projetado: a tela
-        # mostrava um badge "Failed" sem causa e sem saida. `preso` cobre o
+        # `erro` projeta o meta->>'error': sem ele a tela mostraria um badge
+        # "Failed" sem causa e sem saida. `preso` cobre o
         # outro silencio — se a fila perde o job, o documento fica em
         # pending/processing para sempre e o browser faz polling indefinido.
         base_sql = (
@@ -561,8 +561,8 @@ async def list_documents(
 
     rows = await run_in_threadpool(_listar_documentos, acervo, relevant_ids)
 
-    # O SELECT ja trazia `erro` e `preso` e o dict os descartava: o badge
-    # "Failed"/"Stalled" da tela nunca tinha o que mostrar.
+    # `erro` e `preso` vao no dict: sem eles o badge "Failed"/"Stalled" da
+    # tela nao tem o que mostrar.
     items = [{
         "id": str(r["id"]),
         "title": r["title"],
